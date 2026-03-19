@@ -3,7 +3,6 @@ import { ReactNode } from 'react';
 import { ScrollableCodeHighlight } from '../../components/ScrollableCodeHighlight.tsx';
 import { HomeCard } from './HomeCard.tsx';
 import { LoadFromFile } from './LoadFromFile.tsx';
-import { LoadFromProsperity } from './LoadFromProsperity.tsx';
 import { LoadFromUrl } from './LoadFromUrl.tsx';
 
 export function HomePage(): ReactNode {
