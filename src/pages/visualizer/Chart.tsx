@@ -1,3 +1,4 @@
+import { Box } from '@mantine/core';
 import Highcharts from 'highcharts/highstock';
 import HighchartsAccessibility from 'highcharts/modules/accessibility';
 import HighchartsExporting from 'highcharts/modules/exporting';
@@ -48,9 +49,10 @@ interface ChartProps {
   series: Highcharts.SeriesOptionsType[];
   min?: number;
   max?: number;
+  controls?: ReactNode;
 }
 
-export function Chart({ title, options, series, min, max }: ChartProps): ReactNode {
+export function Chart({ title, options, series, min, max, controls }: ChartProps): ReactNode {
   const colorScheme = useActualColorScheme();
 
   const fullOptions = useMemo((): Highcharts.Options => {
@@ -160,6 +162,11 @@ export function Chart({ title, options, series, min, max }: ChartProps): ReactNo
 
   return (
     <VisualizerCard p={0}>
+      {controls && (
+        <Box p="md" pb={0}>
+          {controls}
+        </Box>
+      )}
       <HighchartsReact highcharts={Highcharts} constructorType={'stockChart'} options={fullOptions} immutable />
     </VisualizerCard>
   );

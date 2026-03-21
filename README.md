@@ -17,6 +17,7 @@ This project is based on the IMC Prosperity 3 visualizer:
 https://jmerle.github.io/imc-prosperity-3-visualizer/
 
 The original implementation has been modified to:
+
 - Support Prosperity 4 datasets and trading mechanics
 - Improve usability and visualization features
 - Integrate custom service components for deployment

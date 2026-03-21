@@ -4,6 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store.ts';
 import { formatNumber } from '../../utils/format.ts';
 import { AlgorithmSummaryCard } from './AlgorithmSummaryCard.tsx';
+import { CandlestickChart } from './CandlestickChart.tsx';
 import { ConversionPriceChart } from './ConversionPriceChart.tsx';
 import { EnvironmentChart } from './EnvironmentChart.tsx';
 import { OrdersChart } from './OrdersChart.tsx';
@@ -61,6 +62,12 @@ export function VisualizerPage(): ReactNode {
     symbolColumns.push(
       <Grid.Col key={`${symbol} - product price`} span={{ xs: 12, sm: 6 }}>
         <ProductPriceChart symbol={symbol} />
+      </Grid.Col>,
+    );
+
+    symbolColumns.push(
+      <Grid.Col key={`${symbol} - candlestick`} span={{ xs: 12, sm: 6 }}>
+        <CandlestickChart symbol={symbol} />
       </Grid.Col>,
     );
 

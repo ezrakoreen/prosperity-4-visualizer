@@ -6,7 +6,7 @@ import { ErrorAlert } from '../../components/ErrorAlert.tsx';
 import { useAsync } from '../../hooks/use-async.ts';
 import { ResultLog } from '../../models.ts';
 import { useStore } from '../../store.ts';
-import {  parseAlgorithmLogs } from '../../utils/algorithm.tsx';
+import { parseAlgorithmLogs } from '../../utils/algorithm.tsx';
 import { HomeCard } from './HomeCard.tsx';
 
 export function LoadFromUrl(): ReactNode {

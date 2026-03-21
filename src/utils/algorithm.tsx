@@ -238,7 +238,6 @@ function getAlgorithmData(resultLog: ResultLog): AlgorithmDataRow[] {
 }
 
 export function parseAlgorithmLogs(resultLog: ResultLog, summary?: AlgorithmSummary): Algorithm {
-
   const activityLogs = getActivityLogs(resultLog.activitiesLog);
   const data = getAlgorithmData(resultLog);
 
