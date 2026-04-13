@@ -1,8 +1,9 @@
-import { Center, Container, Grid, Title } from '@mantine/core';
+import { Center, Container, Grid, Stack, Text, Title } from '@mantine/core';
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store.ts';
 import { formatNumber } from '../../utils/format.ts';
+import { getPerformanceMetrics } from '../../utils/performance.ts';
 import { AlgorithmSummaryCard } from './AlgorithmSummaryCard.tsx';
 import { CandlestickChart } from './CandlestickChart.tsx';
 import { ConversionPriceChart } from './ConversionPriceChart.tsx';
@@ -31,11 +32,7 @@ export function VisualizerPage(): ReactNode {
     }
   }
 
-  let profitLoss = 0;
-  const lastTimestamp = algorithm.activityLogs[algorithm.activityLogs.length - 1].timestamp;
-  for (let i = algorithm.activityLogs.length - 1; i >= 0 && algorithm.activityLogs[i].timestamp == lastTimestamp; i--) {
-    profitLoss += algorithm.activityLogs[i].profitLoss;
-  }
+  const performanceMetrics = getPerformanceMetrics(algorithm.activityLogs);
 
   const symbols = new Set<string>();
   const plainValueObservationSymbols = new Set<string>();
@@ -107,9 +104,40 @@ export function VisualizerPage(): ReactNode {
       <Grid>
         <Grid.Col span={12}>
           <VisualizerCard>
-            <Center>
-              <Title order={2}>Final Profit / Loss: {formatNumber(profitLoss)}</Title>
-            </Center>
+            <Grid>
+              <Grid.Col span={{ xs: 12, sm: 4 }}>
+                <Center>
+                  <Stack gap={4} align="center">
+                    <Text c="dimmed" size="sm" tt="uppercase" fw={700}>
+                      Final Profit / Loss
+                    </Text>
+                    <Title order={2}>{formatNumber(performanceMetrics.finalProfitLoss)}</Title>
+                  </Stack>
+                </Center>
+              </Grid.Col>
+              <Grid.Col span={{ xs: 12, sm: 4 }}>
+                <Center>
+                  <Stack gap={4} align="center">
+                    <Text c="dimmed" size="sm" tt="uppercase" fw={700}>
+                      Sharpe Ratio
+                    </Text>
+                    <Title order={2}>
+                      {performanceMetrics.sharpeRatio === null ? 'N/A' : formatNumber(performanceMetrics.sharpeRatio, 2)}
+                    </Title>
+                  </Stack>
+                </Center>
+              </Grid.Col>
+              <Grid.Col span={{ xs: 12, sm: 4 }}>
+                <Center>
+                  <Stack gap={4} align="center">
+                    <Text c="dimmed" size="sm" tt="uppercase" fw={700}>
+                      Max Drawdown
+                    </Text>
+                    <Title order={2}>{formatNumber(performanceMetrics.maxDrawdown)}</Title>
+                  </Stack>
+                </Center>
+              </Grid.Col>
+            </Grid>
           </VisualizerCard>
         </Grid.Col>
         <Grid.Col span={{ xs: 12, sm: 6 }}>

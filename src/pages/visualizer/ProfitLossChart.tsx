@@ -1,6 +1,7 @@
 import Highcharts from 'highcharts';
 import { ReactNode } from 'react';
 import { useStore } from '../../store.ts';
+import { getProfitLossSeries } from '../../utils/performance.ts';
 import { Chart } from './Chart.tsx';
 
 export interface ProfitLossChartProps {
@@ -9,21 +10,13 @@ export interface ProfitLossChartProps {
 
 export function ProfitLossChart({ symbols }: ProfitLossChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
-
-  const dataByTimestamp = new Map<number, number>();
-  for (const row of algorithm.activityLogs) {
-    if (!dataByTimestamp.has(row.timestamp)) {
-      dataByTimestamp.set(row.timestamp, row.profitLoss);
-    } else {
-      dataByTimestamp.set(row.timestamp, dataByTimestamp.get(row.timestamp)! + row.profitLoss);
-    }
-  }
+  const totalProfitLossSeries = getProfitLossSeries(algorithm.activityLogs);
 
   const series: Highcharts.SeriesOptionsType[] = [
     {
       type: 'line',
       name: 'Total',
-      data: [...dataByTimestamp.keys()].map(timestamp => [timestamp, dataByTimestamp.get(timestamp)]),
+      data: totalProfitLossSeries,
     },
   ];
 
