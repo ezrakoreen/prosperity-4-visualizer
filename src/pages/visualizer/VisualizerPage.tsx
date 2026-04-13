@@ -122,7 +122,7 @@ export function VisualizerPage(): ReactNode {
                       Sharpe Ratio
                     </Text>
                     <Title order={2}>
-                      {performanceMetrics.sharpeRatio === null ? 'N/A' : formatNumber(performanceMetrics.sharpeRatio, 2)}
+                      {performanceMetrics.sharpeRatio === null ? 'N/A' : formatNumber(performanceMetrics.sharpeRatio, 4)}
                     </Title>
                   </Stack>
                 </Center>
