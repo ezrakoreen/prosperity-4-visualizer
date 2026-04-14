@@ -7,13 +7,18 @@ import { SimpleTable } from './SimpleTable.tsx';
 
 export interface OrdersTableProps {
   orders: AlgorithmDataRow['orders'];
+  quantityFilter: number | null;
 }
 
-export function OrdersTable({ orders }: OrdersTableProps): ReactNode {
+export function OrdersTable({ orders, quantityFilter }: OrdersTableProps): ReactNode {
   const rows: ReactNode[] = [];
   for (const symbol of Object.keys(orders)) {
     for (let i = 0; i < orders[symbol].length; i++) {
       const order = orders[symbol][i];
+
+      if (quantityFilter !== null && Math.abs(order.quantity) !== quantityFilter) {
+        continue;
+      }
 
       const colorFunc = order.quantity > 0 ? getBidColor : getAskColor;
 
@@ -28,5 +33,11 @@ export function OrdersTable({ orders }: OrdersTableProps): ReactNode {
     }
   }
 
-  return <SimpleTable label="orders" columns={['Symbol', 'Type', 'Price', 'Quantity']} rows={rows} />;
+  return (
+    <SimpleTable
+      label={quantityFilter === null ? 'orders' : `orders matching quantity ${formatNumber(quantityFilter)}`}
+      columns={['Symbol', 'Type', 'Price', 'Quantity']}
+      rows={rows}
+    />
+  );
 }
