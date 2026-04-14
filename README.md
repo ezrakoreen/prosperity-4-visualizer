@@ -9,7 +9,7 @@ It is forked from the original IMC Prosperity 3 visualizer (https://jmerle.githu
 ## 🔗 Live Demo
 
 The deployed visualizer is available at:  
-https://ezrakoreen.github.io/imc-prosperity-4-visualizer/
+https://ezrakoreen.github.io/prosperity-4-visualizer/
 
 ## 📌 Background
 
