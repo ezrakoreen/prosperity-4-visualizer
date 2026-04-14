@@ -12,6 +12,7 @@ export interface OrdersChartProps {
 
 export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
+  const setVisualizerTimestamp = useStore(state => state.setVisualizerTimestamp);
   const [priceMode, setPriceMode] = useState<'mid' | 'bidask'>('mid');
   const [relativeToMidPrice, setRelativeToMidPrice] = useState(false);
 
@@ -49,6 +50,10 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
 
   const offsetSeries = (data: [number, number][]): [number, number][] =>
     data.map(([timestamp, price]) => [timestamp, offsetPrice(timestamp, price)]);
+
+  const navigateToTimestamp = (timestamp: number): void => {
+    setVisualizerTimestamp(timestamp);
+  };
 
   const filledBuyData: Highcharts.PointOptionsObject[] = [];
   const filledSellData: Highcharts.PointOptionsObject[] = [];
@@ -141,7 +146,14 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
               dashStyle: 'Dash',
               data: midPriceData,
               marker: { enabled: false },
-              enableMouseTracking: false,
+              cursor: 'pointer',
+              point: {
+                events: {
+                  click() {
+                    navigateToTimestamp(this.x as number);
+                  },
+                },
+              },
             },
           ]
       : [
@@ -151,7 +163,14 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             color: getBidColor(0.5),
             data: offsetSeries(bid3Data),
             marker: { enabled: false },
-            enableMouseTracking: false,
+            cursor: 'pointer',
+            point: {
+              events: {
+                click() {
+                  navigateToTimestamp(this.x as number);
+                },
+              },
+            },
           },
           {
             type: 'line',
@@ -159,7 +178,14 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             color: getBidColor(0.75),
             data: offsetSeries(bid2Data),
             marker: { enabled: false },
-            enableMouseTracking: false,
+            cursor: 'pointer',
+            point: {
+              events: {
+                click() {
+                  navigateToTimestamp(this.x as number);
+                },
+              },
+            },
           },
           {
             type: 'line',
@@ -167,7 +193,14 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             color: getBidColor(1.0),
             data: offsetSeries(bid1Data),
             marker: { enabled: false },
-            enableMouseTracking: false,
+            cursor: 'pointer',
+            point: {
+              events: {
+                click() {
+                  navigateToTimestamp(this.x as number);
+                },
+              },
+            },
           },
           {
             type: 'line',
@@ -175,7 +208,14 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             color: getAskColor(1.0),
             data: offsetSeries(ask1Data),
             marker: { enabled: false },
-            enableMouseTracking: false,
+            cursor: 'pointer',
+            point: {
+              events: {
+                click() {
+                  navigateToTimestamp(this.x as number);
+                },
+              },
+            },
           },
           {
             type: 'line',
@@ -183,7 +223,14 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             color: getAskColor(0.75),
             data: offsetSeries(ask2Data),
             marker: { enabled: false },
-            enableMouseTracking: false,
+            cursor: 'pointer',
+            point: {
+              events: {
+                click() {
+                  navigateToTimestamp(this.x as number);
+                },
+              },
+            },
           },
           {
             type: 'line',
@@ -191,7 +238,14 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             color: getAskColor(0.5),
             data: offsetSeries(ask3Data),
             marker: { enabled: false },
-            enableMouseTracking: false,
+            cursor: 'pointer',
+            point: {
+              events: {
+                click() {
+                  navigateToTimestamp(this.x as number);
+                },
+              },
+            },
           },
         ];
 
@@ -205,6 +259,13 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
       marker: { symbol: 'triangle', radius: 6 },
       tooltip: filledBuyTooltip,
       dataGrouping: { enabled: false },
+      point: {
+        events: {
+          click() {
+            navigateToTimestamp(this.x as number);
+          },
+        },
+      },
     },
     {
       type: 'scatter',
@@ -215,6 +276,13 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
       tooltip: unfilledBuyTooltip,
       dataGrouping: { enabled: false },
       visible: false,
+      point: {
+        events: {
+          click() {
+            navigateToTimestamp(this.x as number);
+          },
+        },
+      },
     },
     {
       type: 'scatter',
@@ -224,6 +292,13 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
       marker: { symbol: 'triangle-down', radius: 6 },
       tooltip: filledSellTooltip,
       dataGrouping: { enabled: false },
+      point: {
+        events: {
+          click() {
+            navigateToTimestamp(this.x as number);
+          },
+        },
+      },
     },
     {
       type: 'scatter',
@@ -234,6 +309,13 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
       tooltip: unfilledSellTooltip,
       dataGrouping: { enabled: false },
       visible: false,
+      point: {
+        events: {
+          click() {
+            navigateToTimestamp(this.x as number);
+          },
+        },
+      },
     },
     {
       type: 'scatter',
@@ -243,6 +325,13 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
       marker: { symbol: 'diamond', radius: 6 },
       tooltip: otherTradeTooltip,
       dataGrouping: { enabled: false },
+      point: {
+        events: {
+          click() {
+            navigateToTimestamp(this.x as number);
+          },
+        },
+      },
     },
   ];
 
@@ -275,6 +364,9 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
           title: {
             text: relativeToMidPrice ? 'Price vs Mid' : 'Price',
           },
+        },
+        tooltip: {
+          shared: false,
         },
       }}
     />

@@ -1,6 +1,6 @@
 import { Group, NumberInput, Slider, SliderProps, Text, Title } from '@mantine/core';
 import { useHotkeys } from '@mantine/hooks';
-import { KeyboardEvent, ReactNode, useEffect, useState } from 'react';
+import { KeyboardEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { AlgorithmDataRow } from '../../models.ts';
 import { useStore } from '../../store.ts';
 import { formatNumber } from '../../utils/format.ts';
@@ -9,6 +9,9 @@ import { VisualizerCard } from './VisualizerCard.tsx';
 
 export function TimestampsCard(): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
+  const visualizerTimestamp = useStore(state => state.visualizerTimestamp);
+  const setVisualizerTimestamp = useStore(state => state.setVisualizerTimestamp);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const rowsByTimestamp: Record<number, AlgorithmDataRow> = {};
   for (const row of algorithm.data) {
@@ -43,10 +46,25 @@ export function TimestampsCard(): ReactNode {
     return Math.round((clamped - timestampMin) / timestampStep) * timestampStep + timestampMin;
   }
 
+  useEffect(() => {
+    setTimestamp(timestampMin);
+    setVisualizerTimestamp(timestampMin);
+  }, [timestampMin, setVisualizerTimestamp]);
+
+  useEffect(() => {
+    if (visualizerTimestamp === null) {
+      return;
+    }
+
+    const nextTimestamp = snapToNearest(visualizerTimestamp);
+    setTimestamp(nextTimestamp);
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [visualizerTimestamp]);
+
   function commit(): void {
     const parsed = typeof inputValue === 'number' ? inputValue : Number(inputValue);
     if (!isNaN(parsed)) {
-      setTimestamp(snapToNearest(parsed));
+      setVisualizerTimestamp(snapToNearest(parsed));
     }
   }
 
@@ -55,12 +73,13 @@ export function TimestampsCard(): ReactNode {
   }
 
   useHotkeys([
-    ['ArrowLeft', () => setTimestamp(timestamp === timestampMin ? timestamp : timestamp - timestampStep)],
-    ['ArrowRight', () => setTimestamp(timestamp === timestampMax ? timestamp : timestamp + timestampStep)],
+    ['ArrowLeft', () => setVisualizerTimestamp(timestamp === timestampMin ? timestamp : timestamp - timestampStep)],
+    ['ArrowRight', () => setVisualizerTimestamp(timestamp === timestampMax ? timestamp : timestamp + timestampStep)],
   ]);
 
   return (
-    <VisualizerCard>
+    <div ref={cardRef}>
+      <VisualizerCard>
       <Group align="center" gap="xs" mb="xs">
         <Title order={4}>Timestamps</Title>
         <NumberInput
@@ -70,7 +89,7 @@ export function TimestampsCard(): ReactNode {
             // Stepper buttons produce a valid snapped timestamp — commit immediately.
             // Partial typed values (e.g. 273 when heading to 27300) won't match and are left pending.
             if (typeof value === 'number' && snapToNearest(value) === value) {
-              setTimestamp(value);
+              setVisualizerTimestamp(value);
             }
           }}
           onBlur={commit}
@@ -90,7 +109,7 @@ export function TimestampsCard(): ReactNode {
         marks={marks}
         label={value => `Timestamp ${formatNumber(value)}`}
         value={timestamp}
-        onChange={setTimestamp}
+        onChange={setVisualizerTimestamp}
         mb="lg"
       />
 
@@ -99,6 +118,7 @@ export function TimestampsCard(): ReactNode {
       ) : (
         <Text>No logs found for timestamp {formatNumber(timestamp)}</Text>
       )}
-    </VisualizerCard>
+      </VisualizerCard>
+    </div>
   );
 }
