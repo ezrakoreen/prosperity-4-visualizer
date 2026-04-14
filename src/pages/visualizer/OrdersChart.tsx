@@ -142,7 +142,6 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
               data: midPriceData,
               marker: { enabled: false },
               enableMouseTracking: false,
-              dataGrouping: { enabled: false },
             },
           ]
       : [
@@ -153,7 +152,6 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             data: offsetSeries(bid3Data),
             marker: { enabled: false },
             enableMouseTracking: false,
-            dataGrouping: { enabled: false },
           },
           {
             type: 'line',
@@ -162,7 +160,6 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             data: offsetSeries(bid2Data),
             marker: { enabled: false },
             enableMouseTracking: false,
-            dataGrouping: { enabled: false },
           },
           {
             type: 'line',
@@ -171,7 +168,6 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             data: offsetSeries(bid1Data),
             marker: { enabled: false },
             enableMouseTracking: false,
-            dataGrouping: { enabled: false },
           },
           {
             type: 'line',
@@ -180,7 +176,6 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             data: offsetSeries(ask1Data),
             marker: { enabled: false },
             enableMouseTracking: false,
-            dataGrouping: { enabled: false },
           },
           {
             type: 'line',
@@ -189,7 +184,6 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             data: offsetSeries(ask2Data),
             marker: { enabled: false },
             enableMouseTracking: false,
-            dataGrouping: { enabled: false },
           },
           {
             type: 'line',
@@ -198,7 +192,6 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
             data: offsetSeries(ask3Data),
             marker: { enabled: false },
             enableMouseTracking: false,
-            dataGrouping: { enabled: false },
           },
         ];
 
@@ -282,9 +275,6 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
           title: {
             text: relativeToMidPrice ? 'Price vs Mid' : 'Price',
           },
-        },
-        tooltip: {
-          shared: false,
         },
       }}
     />
