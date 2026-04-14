@@ -23,12 +23,10 @@ function formatTraderData(value: any): string {
 
 export interface TimestampDetailProps {
   row: AlgorithmDataRow;
-  quantityFilter: number | null;
 }
 
 export function TimestampDetail({
   row: { state, orders, conversions, traderData, algorithmLogs, sandboxLogs },
-  quantityFilter,
 }: TimestampDetailProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
 
@@ -67,15 +65,15 @@ export function TimestampDetail({
       {Object.keys(state.orderDepths).length % 3 <= 1 && <Grid.Col span={{ xs: 12, sm: 4 }} />}
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Most Recent Own trades</Title>
-        {<TradesTable trades={state.ownTrades} quantityFilter={quantityFilter} />}
+        {<TradesTable trades={state.ownTrades} />}
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Most Recent Market trades</Title>
-        {<TradesTable trades={state.marketTrades} quantityFilter={quantityFilter} />}
+        {<TradesTable trades={state.marketTrades} />}
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Orders</Title>
-        {<OrdersTable orders={orders} quantityFilter={quantityFilter} />}
+        {<OrdersTable orders={orders} />}
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Plain value observations</Title>

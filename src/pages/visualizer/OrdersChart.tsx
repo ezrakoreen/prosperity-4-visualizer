@@ -1,4 +1,4 @@
-import { SegmentedControl } from '@mantine/core';
+import { Group, SegmentedControl, TextInput } from '@mantine/core';
 import Highcharts from 'highcharts';
 import { ReactNode, useState } from 'react';
 import { ProsperitySymbol } from '../../models.ts';
@@ -13,6 +13,17 @@ export interface OrdersChartProps {
 export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
   const [priceMode, setPriceMode] = useState<'mid' | 'bidask'>('mid');
+  const [quantityFilterInput, setQuantityFilterInput] = useState('');
+
+  const trimmedQuantityFilterInput = quantityFilterInput.trim();
+  const parsedQuantityFilter = Number(trimmedQuantityFilterInput);
+  const quantityFilter =
+    trimmedQuantityFilterInput === '' || !Number.isFinite(parsedQuantityFilter) ? null : parsedQuantityFilter;
+  const quantityFilterError = trimmedQuantityFilterInput !== '' && !Number.isFinite(parsedQuantityFilter);
+
+  function matchesQuantity(quantity: number): boolean {
+    return quantityFilter === null || Math.abs(quantity) === quantityFilter;
+  }
 
   const midPriceData: [number, number][] = [];
   const bid1Data: [number, number][] = [];
@@ -41,6 +52,7 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
 
   for (const trade of algorithm.tradeHistory) {
     if (trade.symbol !== symbol) continue;
+    if (!matchesQuantity(trade.quantity)) continue;
 
     const point: Highcharts.PointOptionsObject = {
       x: trade.timestamp,
@@ -65,6 +77,8 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
     if (!orders) continue;
 
     for (const order of orders) {
+      if (!matchesQuantity(order.quantity)) continue;
+
       const point: Highcharts.PointOptionsObject = {
         x: row.state.timestamp,
         y: order.price,
@@ -230,15 +244,27 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
   ];
 
   const controls = (
-    <SegmentedControl
-      size="xs"
-      value={priceMode}
-      onChange={value => setPriceMode(value as 'mid' | 'bidask')}
-      data={[
-        { label: 'Mid Price', value: 'mid' },
-        { label: 'Bid/Ask', value: 'bidask' },
-      ]}
-    />
+    <Group align='flex-end' gap='xs'>
+      <SegmentedControl
+        size='xs'
+        value={priceMode}
+        onChange={value => setPriceMode(value as 'mid' | 'bidask')}
+        data={[
+          { label: 'Mid Price', value: 'mid' },
+          { label: 'Bid/Ask', value: 'bidask' },
+        ]}
+      />
+      <TextInput
+        label='Quantity'
+        value={quantityFilterInput}
+        onChange={event => setQuantityFilterInput(event.currentTarget.value)}
+        placeholder='e.g. 10'
+        inputMode='decimal'
+        error={quantityFilterError ? 'Enter a valid number' : undefined}
+        size='xs'
+        w={110}
+      />
+    </Group>
   );
 
   return <Chart title={`${symbol} - Order Book`} series={series} controls={controls} />;

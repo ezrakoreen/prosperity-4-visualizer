@@ -1,4 +1,4 @@
-import { Group, NumberInput, Slider, SliderProps, Text, TextInput, Title } from '@mantine/core';
+import { Group, NumberInput, Slider, SliderProps, Text, Title } from '@mantine/core';
 import { useHotkeys } from '@mantine/hooks';
 import { KeyboardEvent, ReactNode, useEffect, useState } from 'react';
 import { AlgorithmDataRow } from '../../models.ts';
@@ -25,7 +25,6 @@ export function TimestampsCard(): ReactNode {
 
   const [timestamp, setTimestamp] = useState(timestampMin);
   const [inputValue, setInputValue] = useState<number | string>(timestampMin);
-  const [quantityFilterInput, setQuantityFilterInput] = useState('');
 
   useEffect(() => {
     setInputValue(timestamp);
@@ -55,12 +54,6 @@ export function TimestampsCard(): ReactNode {
     if (e.key === 'Enter') commit();
   }
 
-  const trimmedQuantityFilterInput = quantityFilterInput.trim();
-  const parsedQuantityFilter = Number(trimmedQuantityFilterInput);
-  const quantityFilter =
-    trimmedQuantityFilterInput === '' || !Number.isFinite(parsedQuantityFilter) ? null : parsedQuantityFilter;
-  const quantityFilterError = trimmedQuantityFilterInput !== '' && !Number.isFinite(parsedQuantityFilter);
-
   useHotkeys([
     ['ArrowLeft', () => setTimestamp(timestamp === timestampMin ? timestamp : timestamp - timestampStep)],
     ['ArrowRight', () => setTimestamp(timestamp === timestampMax ? timestamp : timestamp + timestampStep)],
@@ -68,10 +61,9 @@ export function TimestampsCard(): ReactNode {
 
   return (
     <VisualizerCard>
-      <Group align="flex-end" gap="xs" mb="xs">
+      <Group align="center" gap="xs" mb="xs">
         <Title order={4}>Timestamps</Title>
         <NumberInput
-          label="Timestamp"
           value={inputValue}
           onChange={value => {
             setInputValue(value);
@@ -89,16 +81,6 @@ export function TimestampsCard(): ReactNode {
           style={{ width: 150 }}
           styles={{ input: { fontWeight: 700, fontSize: 'var(--mantine-font-size-sm)' } }}
         />
-        <TextInput
-          label="Quantity filter"
-          value={quantityFilterInput}
-          onChange={event => setQuantityFilterInput(event.currentTarget.value)}
-          placeholder="e.g. 5"
-          inputMode="decimal"
-          error={quantityFilterError ? 'Enter a valid number' : undefined}
-          style={{ width: 150 }}
-          styles={{ input: { fontWeight: 700, fontSize: 'var(--mantine-font-size-sm)' } }}
-        />
       </Group>
 
       <Slider
@@ -113,7 +95,7 @@ export function TimestampsCard(): ReactNode {
       />
 
       {rowsByTimestamp[timestamp] ? (
-        <TimestampDetail row={rowsByTimestamp[timestamp]} quantityFilter={quantityFilter} />
+        <TimestampDetail row={rowsByTimestamp[timestamp]} />
       ) : (
         <Text>No logs found for timestamp {formatNumber(timestamp)}</Text>
       )}

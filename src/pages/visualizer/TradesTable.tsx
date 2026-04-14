@@ -7,18 +7,13 @@ import { SimpleTable } from './SimpleTable.tsx';
 
 export interface TradesTableProps {
   trades: Record<ProsperitySymbol, Trade[]>;
-  quantityFilter: number | null;
 }
 
-export function TradesTable({ trades, quantityFilter }: TradesTableProps): ReactNode {
+export function TradesTable({ trades }: TradesTableProps): ReactNode {
   const rows: ReactNode[] = [];
   for (const symbol of Object.keys(trades).sort((a, b) => a.localeCompare(b))) {
     for (let i = 0; i < trades[symbol].length; i++) {
       const trade = trades[symbol][i];
-
-      if (quantityFilter !== null && trade.quantity !== quantityFilter) {
-        continue;
-      }
 
       let color: string;
       if (trade.buyer === 'SUBMISSION') {
@@ -43,10 +38,6 @@ export function TradesTable({ trades, quantityFilter }: TradesTableProps): React
   }
 
   return (
-    <SimpleTable
-      label={quantityFilter === null ? 'trades' : `trades matching quantity ${formatNumber(quantityFilter)}`}
-      columns={['Symbol', 'Buyer', 'Seller', 'Price', 'Quantity', 'Timestamp']}
-      rows={rows}
-    />
+    <SimpleTable label='trades' columns={['Symbol', 'Buyer', 'Seller', 'Price', 'Quantity', 'Timestamp']} rows={rows} />
   );
 }
