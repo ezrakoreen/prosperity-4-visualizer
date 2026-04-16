@@ -192,11 +192,30 @@ function decompressDataRow(compressed: CompressedAlgorithmDataRow, sandboxLogs: 
   };
 }
 
+function appendLog(existing: string, next: string): string {
+  if (next === '') {
+    return existing;
+  }
+
+  if (existing === '') {
+    return next;
+  }
+
+  return `${existing}\n\n${next}`;
+}
+
+function isRecoverableLambdaLog(lambdaLog: string, sandboxLog: string): boolean {
+  return lambdaLog.startsWith('[ERROR]') || (sandboxLog !== '' && lambdaLog === sandboxLog);
+}
+
 function getAlgorithmData(resultLog: ResultLog): AlgorithmDataRow[] {
   const rows: AlgorithmDataRow[] = [];
-  const nextSandboxLogs = '';
+  let pendingSandboxLogs = '';
 
   for (const lg of resultLog.logs) {
+    const sandboxLog = lg.sandboxLog.trim();
+    pendingSandboxLogs = appendLog(pendingSandboxLogs, sandboxLog);
+
     const lambdaLog = lg.lambdaLog.trim();
     if (lambdaLog === '') {
       continue;
@@ -204,8 +223,14 @@ function getAlgorithmData(resultLog: ResultLog): AlgorithmDataRow[] {
 
     try {
       const compressedDataRow = JSON.parse(lambdaLog);
-      rows.push(decompressDataRow(compressedDataRow, nextSandboxLogs));
+      rows.push(decompressDataRow(compressedDataRow, pendingSandboxLogs));
+      pendingSandboxLogs = '';
     } catch (err) {
+      if (isRecoverableLambdaLog(lambdaLog, sandboxLog)) {
+        pendingSandboxLogs = appendLog(pendingSandboxLogs, sandboxLog === lambdaLog ? '' : lambdaLog);
+        continue;
+      }
+
       console.log(lambdaLog);
       console.error(err);
 
@@ -218,6 +243,10 @@ function getAlgorithmData(resultLog: ResultLog): AlgorithmDataRow[] {
         ),
       );
     }
+  }
+
+  if (pendingSandboxLogs !== '' && rows.length > 0) {
+    rows[rows.length - 1].sandboxLogs = appendLog(rows[rows.length - 1].sandboxLogs, pendingSandboxLogs);
   }
 
   // Adjust trade timestamps: the backtester records within-day timestamps (0–999900)
