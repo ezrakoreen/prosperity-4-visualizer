@@ -1,5 +1,5 @@
 import Highcharts from 'highcharts';
-import { ReactNode } from 'react';
+import { memo, ReactNode } from 'react';
 import { useStore } from '../../store.ts';
 import { getProfitLossSeries } from '../../utils/performance.ts';
 import { Chart } from './Chart.tsx';
@@ -8,7 +8,7 @@ export interface ProfitLossChartProps {
   symbols: string[];
 }
 
-export function ProfitLossChart({ symbols }: ProfitLossChartProps): ReactNode {
+export const ProfitLossChart = memo(function ProfitLossChart({ symbols }: ProfitLossChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
   const totalProfitLossSeries = getProfitLossSeries(algorithm.activityLogs);
 
@@ -38,4 +38,4 @@ export function ProfitLossChart({ symbols }: ProfitLossChartProps): ReactNode {
   });
 
   return <Chart title="Profit / Loss" series={series} />;
-}
+});

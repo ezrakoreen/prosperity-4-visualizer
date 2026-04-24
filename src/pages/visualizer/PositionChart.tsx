@@ -1,5 +1,5 @@
 import Highcharts from 'highcharts';
-import { ReactNode } from 'react';
+import { memo, ReactNode } from 'react';
 import { Algorithm, ProsperitySymbol } from '../../models.ts';
 import { useStore } from '../../store.ts';
 import { Chart } from './Chart.tsx';
@@ -7,7 +7,7 @@ import { Chart } from './Chart.tsx';
 function getLimit(algorithm: Algorithm, symbol: ProsperitySymbol): number {
   const knownLimits: Record<string, number> = {
     TOMATOES: 80,
-    EMERALDS: 80
+    EMERALDS: 80,
   };
 
   if (knownLimits[symbol] !== undefined) {
@@ -28,7 +28,7 @@ export interface PositionChartProps {
   symbols: string[];
 }
 
-export function PositionChart({ symbols }: PositionChartProps): ReactNode {
+export const PositionChart = memo(function PositionChart({ symbols }: PositionChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
 
   const limits: Record<string, number> = {};
@@ -59,4 +59,4 @@ export function PositionChart({ symbols }: PositionChartProps): ReactNode {
   }));
 
   return <Chart title="Positions (% of limit)" series={series} min={-100} max={100} />;
-}
+});

@@ -1,5 +1,5 @@
 import Highcharts from 'highcharts';
-import { ReactNode } from 'react';
+import { memo, ReactNode } from 'react';
 import { ProsperitySymbol } from '../../models.ts';
 import { useStore } from '../../store.ts';
 import { getAskColor, getBidColor } from '../../utils/colors.ts';
@@ -9,7 +9,9 @@ export interface ConversionPriceChartProps {
   symbol: ProsperitySymbol;
 }
 
-export function ConversionPriceChart({ symbol }: ConversionPriceChartProps): ReactNode {
+export const ConversionPriceChart = memo(function ConversionPriceChart({
+  symbol,
+}: ConversionPriceChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
 
   const bidPriceData = [];
@@ -38,4 +40,4 @@ export function ConversionPriceChart({ symbol }: ConversionPriceChartProps): Rea
   ];
 
   return <Chart title={`${symbol} - Conversion price`} options={options} series={series} />;
-}
+});

@@ -23,19 +23,37 @@ function formatTraderData(value: any): string {
 
 export interface TimestampDetailProps {
   row: AlgorithmDataRow;
+  visibleSymbols: Record<string, boolean>;
+}
+
+function isVisible(symbol: string, visibleSymbols: Record<string, boolean>): boolean {
+  return visibleSymbols[symbol] !== false;
+}
+
+function filterRecord<T>(record: Record<string, T>, visibleSymbols: Record<string, boolean>): Record<string, T> {
+  return Object.fromEntries(Object.entries(record).filter(([symbol]) => isVisible(symbol, visibleSymbols)));
 }
 
 export function TimestampDetail({
   row: { state, orders, conversions, traderData, algorithmLogs, sandboxLogs },
+  visibleSymbols,
 }: TimestampDetailProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
   const orderedOrderDepthSymbols = Object.keys(state.listings)
+    .filter(symbol => isVisible(symbol, visibleSymbols))
     .filter(symbol => state.orderDepths[symbol] !== undefined)
     .sort((a, b) => a.localeCompare(b));
 
   const profitLoss = algorithm.activityLogs
     .filter(row => row.timestamp === state.timestamp)
     .reduce((acc, val) => acc + val.profitLoss, 0);
+  const visibleListings = filterRecord(state.listings, visibleSymbols);
+  const visiblePositions = filterRecord(state.position, visibleSymbols);
+  const visibleOwnTrades = filterRecord(state.ownTrades, visibleSymbols);
+  const visibleMarketTrades = filterRecord(state.marketTrades, visibleSymbols);
+  const visibleOrders = filterRecord(orders, visibleSymbols);
+  const visiblePlainValueObservations = filterRecord(state.observations.plainValueObservations, visibleSymbols);
+  const visibleConversionObservations = filterRecord(state.observations.conversionObservations, visibleSymbols);
 
   return (
     <Grid columns={12}>
@@ -48,15 +66,15 @@ export function TimestampDetail({
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Listings</Title>
-        <ListingsTable listings={state.listings} />
+        <ListingsTable listings={visibleListings} />
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Positions</Title>
-        <PositionTable position={state.position} />
+        <PositionTable position={visiblePositions} />
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Profit / Loss</Title>
-        <ProfitLossTable timestamp={state.timestamp} />
+        <ProfitLossTable timestamp={state.timestamp} visibleSymbols={visibleSymbols} />
       </Grid.Col>
       {orderedOrderDepthSymbols.map(symbol => (
         <Grid.Col key={symbol} span={{ xs: 12, sm: 4 }}>
@@ -68,23 +86,23 @@ export function TimestampDetail({
       {orderedOrderDepthSymbols.length % 3 <= 1 && <Grid.Col span={{ xs: 12, sm: 4 }} />}
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Most Recent Own trades</Title>
-        {<TradesTable trades={state.ownTrades} />}
+        {<TradesTable trades={visibleOwnTrades} />}
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Most Recent Market trades</Title>
-        {<TradesTable trades={state.marketTrades} />}
+        {<TradesTable trades={visibleMarketTrades} />}
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Orders</Title>
-        {<OrdersTable orders={orders} />}
+        {<OrdersTable orders={visibleOrders} />}
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Plain value observations</Title>
-        <PlainValueObservationsTable plainValueObservations={state.observations.plainValueObservations} />
+        <PlainValueObservationsTable plainValueObservations={visiblePlainValueObservations} />
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 8 }}>
         <Title order={5}>Conversion observations</Title>
-        <ConversionObservationsTable conversionObservations={state.observations.conversionObservations} />
+        <ConversionObservationsTable conversionObservations={visibleConversionObservations} />
       </Grid.Col>
       <Grid.Col span={{ xs: 12, sm: 6 }}>
         <Title order={5}>Sandbox logs</Title>

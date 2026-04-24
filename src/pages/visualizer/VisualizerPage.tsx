@@ -1,5 +1,5 @@
 import { Center, Checkbox, Container, Grid, Group, Stack, Text, Title } from '@mantine/core';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store.ts';
 import { formatNumber } from '../../utils/format.ts';
@@ -26,28 +26,32 @@ export function VisualizerPage(): ReactNode {
 
   const { search } = useLocation();
 
-  const symbols = new Set<string>();
-  const plainValueObservationSymbols = new Set<string>();
+  const { sortedSymbols, sortedPlainValueObservationSymbols, productSymbols } = useMemo(() => {
+    const symbols = new Set<string>();
+    const plainValueObservationSymbols = new Set<string>();
 
-  if (algorithm !== null) {
-    for (let i = 0; i < algorithm.data.length; i += 1000) {
-      const row = algorithm.data[i];
+    if (algorithm !== null) {
+      for (let i = 0; i < algorithm.data.length; i += 1000) {
+        const row = algorithm.data[i];
 
-      for (const key of Object.keys(row.state.listings)) {
-        symbols.add(key);
-      }
+        for (const key of Object.keys(row.state.listings)) {
+          symbols.add(key);
+        }
 
-      for (const key of Object.keys(row.state.observations.plainValueObservations)) {
-        plainValueObservationSymbols.add(key);
+        for (const key of Object.keys(row.state.observations.plainValueObservations)) {
+          plainValueObservationSymbols.add(key);
+        }
       }
     }
-  }
 
-  const sortedSymbols = [...symbols].sort((a, b) => a.localeCompare(b));
-  const sortedPlainValueObservationSymbols = [...plainValueObservationSymbols].sort((a, b) => a.localeCompare(b));
-  const productSymbols = [...new Set([...sortedSymbols, ...sortedPlainValueObservationSymbols])].sort((a, b) =>
-    a.localeCompare(b),
-  );
+    const sortedSymbols = [...symbols].sort((a, b) => a.localeCompare(b));
+    const sortedPlainValueObservationSymbols = [...plainValueObservationSymbols].sort((a, b) => a.localeCompare(b));
+    const productSymbols = [...new Set([...sortedSymbols, ...sortedPlainValueObservationSymbols])].sort((a, b) =>
+      a.localeCompare(b),
+    );
+
+    return { sortedSymbols, sortedPlainValueObservationSymbols, productSymbols };
+  }, [algorithm]);
 
   useEffect(() => {
     setVisibleSymbols(current => {
@@ -71,18 +75,30 @@ export function VisualizerPage(): ReactNode {
     });
   }, [productSymbols]);
 
-  if (algorithm === null) {
+  const conversionProducts = useMemo(() => {
+    const conversionProducts = new Set<string>();
+
+    if (algorithm === null) {
+      return conversionProducts;
+    }
+
+    for (const row of algorithm.data) {
+      for (const product of Object.keys(row.state.observations.conversionObservations)) {
+        conversionProducts.add(product);
+      }
+    }
+    return conversionProducts;
+  }, [algorithm]);
+
+  const performanceMetrics = useMemo(
+    () => (algorithm === null ? null : getPerformanceMetrics(algorithm.activityLogs)),
+    [algorithm],
+  );
+
+  if (algorithm === null || performanceMetrics === null) {
     return <Navigate to={`/${search}`} />;
   }
 
-  const conversionProducts = new Set();
-  for (const row of algorithm.data) {
-    for (const product of Object.keys(row.state.observations.conversionObservations)) {
-      conversionProducts.add(product);
-    }
-  }
-
-  const performanceMetrics = getPerformanceMetrics(algorithm.activityLogs);
   const displaySpan = { xs: 12, sm: singleColumnLayout ? 12 : 6 } as const;
 
   const symbolColumns: ReactNode[] = [];
@@ -151,17 +167,17 @@ export function VisualizerPage(): ReactNode {
               <Text fw={700}>Display Controls</Text>
               <Group gap="md">
                 <Checkbox
-                  label='Show one display per row'
+                  label="Show one display per row"
                   checked={singleColumnLayout}
                   onChange={event => setSingleColumnLayout(event.currentTarget.checked)}
                 />
                 <Checkbox
-                  label='Profit / Loss'
+                  label="Profit / Loss"
                   checked={showProfitLoss}
                   onChange={event => setShowProfitLoss(event.currentTarget.checked)}
                 />
                 <Checkbox
-                  label='Positions'
+                  label="Positions"
                   checked={showPositions}
                   onChange={event => setShowPositions(event.currentTarget.checked)}
                 />
@@ -208,7 +224,9 @@ export function VisualizerPage(): ReactNode {
                       Sharpe Ratio
                     </Text>
                     <Title order={2}>
-                      {performanceMetrics.sharpeRatio === null ? 'N/A' : formatNumber(performanceMetrics.sharpeRatio, 4)}
+                      {performanceMetrics.sharpeRatio === null
+                        ? 'N/A'
+                        : formatNumber(performanceMetrics.sharpeRatio, 4)}
                     </Title>
                   </Stack>
                 </Center>
@@ -238,7 +256,7 @@ export function VisualizerPage(): ReactNode {
         )}
         {symbolColumns}
         <Grid.Col span={12}>
-          <TimestampsCard />
+          <TimestampsCard visibleSymbols={visibleSymbols} />
         </Grid.Col>
         {algorithm.summary && (
           <Grid.Col span={12}>

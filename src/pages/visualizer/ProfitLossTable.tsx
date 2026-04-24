@@ -7,13 +7,15 @@ import { SimpleTable } from './SimpleTable.tsx';
 
 export interface ProfitLossTableProps {
   timestamp: number;
+  visibleSymbols?: Record<string, boolean>;
 }
 
-export function ProfitLossTable({ timestamp }: ProfitLossTableProps): ReactNode {
+export function ProfitLossTable({ timestamp, visibleSymbols = {} }: ProfitLossTableProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
 
   const rows: ReactNode[] = algorithm.activityLogs
     .filter(row => row.timestamp === timestamp)
+    .filter(row => visibleSymbols[row.product] !== false)
     .sort((a, b) => a.product.localeCompare(b.product))
     .map(row => {
       let colorFunc: (alpha: number) => string = () => 'transparent';

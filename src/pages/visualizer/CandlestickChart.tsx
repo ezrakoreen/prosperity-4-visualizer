@@ -1,6 +1,6 @@
 import { Group, SegmentedControl, Select } from '@mantine/core';
 import Highcharts from 'highcharts';
-import { ReactNode, useState } from 'react';
+import { memo, ReactNode, useState } from 'react';
 import { ProsperitySymbol } from '../../models.ts';
 import { useStore } from '../../store.ts';
 import { getAskColor, getBidColor } from '../../utils/colors.ts';
@@ -26,7 +26,7 @@ function defaultGroupSize(timestampCount: number): string {
 
 type ViewMode = 'movement' | 'price' | 'volume';
 
-export function CandlestickChart({ symbol }: CandlestickChartProps): ReactNode {
+export const CandlestickChart = memo(function CandlestickChart({ symbol }: CandlestickChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
   const [viewMode, setViewMode] = useState<ViewMode>('movement');
 
@@ -146,4 +146,4 @@ export function CandlestickChart({ symbol }: CandlestickChartProps): ReactNode {
   );
 
   return <Chart title={title} series={series} controls={controls} />;
-}
+});

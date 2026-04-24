@@ -1,5 +1,5 @@
 import Highcharts from 'highcharts';
-import { ReactNode } from 'react';
+import { memo, ReactNode } from 'react';
 import { ProsperitySymbol } from '../../models.ts';
 import { useStore } from '../../store.ts';
 import { Chart } from './Chart.tsx';
@@ -8,7 +8,7 @@ export interface TransportChartProps {
   symbol: ProsperitySymbol;
 }
 
-export function TransportChart({ symbol }: TransportChartProps): ReactNode {
+export const TransportChart = memo(function TransportChart({ symbol }: TransportChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
 
   const transportFeesData = [];
@@ -33,4 +33,4 @@ export function TransportChart({ symbol }: TransportChartProps): ReactNode {
   ];
 
   return <Chart title={`${symbol} - Transport`} series={series} />;
-}
+});

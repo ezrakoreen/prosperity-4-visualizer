@@ -1,6 +1,6 @@
 import { Group, SegmentedControl, TextInput } from '@mantine/core';
 import Highcharts from 'highcharts';
-import { ReactNode, useState } from 'react';
+import { memo, ReactNode, useState } from 'react';
 import { ProsperitySymbol } from '../../models.ts';
 import { useStore } from '../../store.ts';
 import { getAskColor, getBidColor } from '../../utils/colors.ts';
@@ -11,7 +11,7 @@ export interface OrdersChartProps {
   symbol: ProsperitySymbol;
 }
 
-export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
+export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
   const [priceMode, setPriceMode] = useState<'mid' | 'bidask'>('mid');
   const [referenceMode, setReferenceMode] = useState<'original' | 'vamp' | 'midprice'>('original');
@@ -113,7 +113,10 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
     return formatPrice(rawPrice);
   }
 
-  const displayedMidPriceData = midPriceData.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
+  const displayedMidPriceData = midPriceData.map(([timestamp, price]) => [
+    timestamp,
+    getDisplayPrice(timestamp, price),
+  ]);
   const displayedBid1Data = bid1Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
   const displayedBid2Data = bid2Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
   const displayedBid3Data = bid3Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
@@ -134,7 +137,14 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
     const point: Highcharts.PointOptionsObject = {
       x: trade.timestamp,
       y: getDisplayPrice(trade.timestamp, trade.price),
-      custom: { quantity: trade.quantity, buyer: trade.buyer, seller: trade.seller, rawPrice: trade.price, vamp, midPrice },
+      custom: {
+        quantity: trade.quantity,
+        buyer: trade.buyer,
+        seller: trade.seller,
+        rawPrice: trade.price,
+        vamp,
+        midPrice,
+      },
     };
 
     if (trade.buyer.includes('SUBMISSION')) {
@@ -323,9 +333,9 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
   ];
 
   const controls = (
-    <Group align='flex-end' gap='xs'>
+    <Group align="flex-end" gap="xs">
       <SegmentedControl
-        size='xs'
+        size="xs"
         value={priceMode}
         onChange={value => setPriceMode(value as 'mid' | 'bidask')}
         data={[
@@ -334,7 +344,7 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
         ]}
       />
       <SegmentedControl
-        size='xs'
+        size="xs"
         value={referenceMode}
         onChange={value => setReferenceMode(value as 'original' | 'vamp' | 'midprice')}
         data={[
@@ -344,13 +354,13 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
         ]}
       />
       <TextInput
-        label='Quantity'
+        label="Quantity"
         value={quantityFilterInput}
         onChange={event => setQuantityFilterInput(event.currentTarget.value)}
-        placeholder='e.g. 10'
-        inputMode='decimal'
+        placeholder="e.g. 10"
+        inputMode="decimal"
         error={quantityFilterError ? 'Enter a valid number' : undefined}
-        size='xs'
+        size="xs"
         w={110}
       />
     </Group>
@@ -365,25 +375,22 @@ export function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
         yAxis: {
           title: {
             text:
-              referenceMode === 'vamp'
-                ? 'Price - VAMP'
-                : referenceMode === 'midprice'
-                  ? 'Price - Midprice'
-                  : 'Price',
+              referenceMode === 'vamp' ? 'Price - VAMP' : referenceMode === 'midprice' ? 'Price - Midprice' : 'Price',
           },
           allowDecimals: referenceMode !== 'original',
-          plotLines: referenceMode !== 'original'
-            ? [
-                {
-                  color: 'gray',
-                  dashStyle: 'Dash',
-                  value: 0,
-                  width: 1,
-                },
-              ]
-            : [],
+          plotLines:
+            referenceMode !== 'original'
+              ? [
+                  {
+                    color: 'gray',
+                    dashStyle: 'Dash',
+                    value: 0,
+                    width: 1,
+                  },
+                ]
+              : [],
         },
       }}
     />
   );
-}
+});

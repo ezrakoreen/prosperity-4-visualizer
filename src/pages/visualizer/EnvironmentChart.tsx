@@ -1,5 +1,5 @@
 import Highcharts from 'highcharts';
-import { ReactNode } from 'react';
+import { memo, ReactNode } from 'react';
 import { ProsperitySymbol } from '../../models.ts';
 import { useStore } from '../../store.ts';
 import { Chart } from './Chart.tsx';
@@ -8,7 +8,7 @@ export interface EnvironmentChartProps {
   symbol: ProsperitySymbol;
 }
 
-export function EnvironmentChart({ symbol }: EnvironmentChartProps): ReactNode {
+export const EnvironmentChart = memo(function EnvironmentChart({ symbol }: EnvironmentChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
 
   const sugarPriceData = [];
@@ -34,4 +34,4 @@ export function EnvironmentChart({ symbol }: EnvironmentChartProps): ReactNode {
   };
 
   return <Chart title={`${symbol} - Environment`} options={options} series={series} />;
-}
+});

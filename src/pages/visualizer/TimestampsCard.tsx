@@ -7,7 +7,11 @@ import { formatNumber } from '../../utils/format.ts';
 import { TimestampDetail } from './TimestampDetail.tsx';
 import { VisualizerCard } from './VisualizerCard.tsx';
 
-export function TimestampsCard(): ReactNode {
+export interface TimestampsCardProps {
+  visibleSymbols: Record<string, boolean>;
+}
+
+export function TimestampsCard({ visibleSymbols }: TimestampsCardProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
 
   const rowsByTimestamp: Record<number, AlgorithmDataRow> = {};
@@ -95,7 +99,7 @@ export function TimestampsCard(): ReactNode {
       />
 
       {rowsByTimestamp[timestamp] ? (
-        <TimestampDetail row={rowsByTimestamp[timestamp]} />
+        <TimestampDetail row={rowsByTimestamp[timestamp]} visibleSymbols={visibleSymbols} />
       ) : (
         <Text>No logs found for timestamp {formatNumber(timestamp)}</Text>
       )}
