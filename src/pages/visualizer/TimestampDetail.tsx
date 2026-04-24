@@ -29,6 +29,9 @@ export function TimestampDetail({
   row: { state, orders, conversions, traderData, algorithmLogs, sandboxLogs },
 }: TimestampDetailProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
+  const orderedOrderDepthSymbols = Object.keys(state.listings)
+    .filter(symbol => state.orderDepths[symbol] !== undefined)
+    .sort((a, b) => a.localeCompare(b));
 
   const profitLoss = algorithm.activityLogs
     .filter(row => row.timestamp === state.timestamp)
@@ -55,14 +58,14 @@ export function TimestampDetail({
         <Title order={5}>Profit / Loss</Title>
         <ProfitLossTable timestamp={state.timestamp} />
       </Grid.Col>
-      {Object.entries(state.orderDepths).map(([symbol, orderDepth], i) => (
-        <Grid.Col key={i} span={{ xs: 12, sm: 4 }}>
+      {orderedOrderDepthSymbols.map(symbol => (
+        <Grid.Col key={symbol} span={{ xs: 12, sm: 4 }}>
           <Title order={5}>{symbol} order depth</Title>
-          <OrderDepthTable orderDepth={orderDepth} />
+          <OrderDepthTable orderDepth={state.orderDepths[symbol]} />
         </Grid.Col>
       ))}
-      {Object.keys(state.orderDepths).length % 3 <= 2 && <Grid.Col span={{ xs: 12, sm: 4 }} />}
-      {Object.keys(state.orderDepths).length % 3 <= 1 && <Grid.Col span={{ xs: 12, sm: 4 }} />}
+      {orderedOrderDepthSymbols.length % 3 <= 2 && <Grid.Col span={{ xs: 12, sm: 4 }} />}
+      {orderedOrderDepthSymbols.length % 3 <= 1 && <Grid.Col span={{ xs: 12, sm: 4 }} />}
       <Grid.Col span={{ xs: 12, sm: 4 }}>
         <Title order={5}>Most Recent Own trades</Title>
         {<TradesTable trades={state.ownTrades} />}

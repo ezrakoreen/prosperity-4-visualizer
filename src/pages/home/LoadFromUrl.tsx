@@ -20,7 +20,7 @@ export function LoadFromUrl(): ReactNode {
 
   const loadAlgorithm = useAsync(async (logsUrl: string): Promise<void> => {
     const logsResponse = await axios.get<ResultLog>(logsUrl);
-    setAlgorithm(parseAlgorithmLogs(logsResponse.data));
+    setAlgorithm(parseAlgorithmLogs(logsResponse.data), logsUrl);
     navigate(`/visualizer?open=${logsUrl}`);
   });
 

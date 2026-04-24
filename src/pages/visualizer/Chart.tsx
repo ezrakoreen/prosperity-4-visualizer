@@ -58,10 +58,12 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
   const fullOptions = useMemo((): Highcharts.Options => {
     const themeOptions = colorScheme === 'light' ? {} : getThemeOptions(HighchartsHighContrastDarkTheme);
 
-    const chartOptions: Highcharts.Options = {
+    const baseOptions: Highcharts.Options = {
       chart: {
         animation: false,
         height: 400,
+        zoomType: 'x',
+        pinchType: 'x',
         zooming: {
           type: 'x',
         },
@@ -78,12 +80,17 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
                 return true;
               }
 
-              let timestamp = e.labelConfig.point.x;
+              const point = e.labelConfig?.point;
+              if (!point) {
+                return true;
+              }
 
-              if (e.labelConfig.point.dataGroup) {
+              let timestamp = point.x;
+
+              if (point.dataGroup) {
                 const xData = e.labelConfig.series.xData;
                 const lastTimestamp = xData[xData.length - 1];
-                if (timestamp + 100 * e.labelConfig.point.dataGroup.length >= lastTimestamp) {
+                if (timestamp + 100 * point.dataGroup.length >= lastTimestamp) {
                   timestamp = lastTimestamp;
                 }
               }
@@ -99,7 +106,7 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
             (this as any).tooltip.update({ outside: true });
           },
         },
-      },
+      } as Highcharts.ChartOptions & { zoomType: 'x'; pinchType: 'x' },
       title: {
         text: title,
       },
@@ -126,6 +133,7 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
       },
       xAxis: {
         type: 'datetime',
+        ordinal: false,
         title: {
           text: 'Timestamp',
         },
@@ -160,10 +168,9 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
         enabled: false,
       },
       series,
-      ...options,
     };
 
-    return merge(themeOptions, chartOptions);
+    return merge({}, themeOptions, baseOptions, options);
   }, [colorScheme, title, options, series, min, max]);
 
   return (
@@ -173,7 +180,7 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
           {controls}
         </Box>
       )}
-      <HighchartsReact highcharts={Highcharts} constructorType={'stockChart'} options={fullOptions} immutable />
+      <HighchartsReact highcharts={Highcharts} constructorType={'stockChart'} options={fullOptions} />
     </VisualizerCard>
   );
 }

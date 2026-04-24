@@ -50,7 +50,7 @@ export function AlgorithmDetail({ position, algorithm, proxy }: AlgorithmDetailP
     const logsUrl = await getAlgorithmLogsUrl(algorithm.id);
     const logsResponse = await axios.get<ResultLog>(proxy + logsUrl);
     const alg = parseAlgorithmLogs(logsResponse.data, algorithm);
-    setAlgorithm(alg);
+    setAlgorithm(alg, `${algorithm.fileName} (${formatTimestamp(algorithm.timestamp)})`);
     navigate('/visualizer');
   });
 

@@ -39,7 +39,7 @@ export function LoadFromFile(): ReactNode {
           try {
             const resultLog = JSON.parse(reader.result as string) as ResultLog;
             const algorithm = parseAlgorithmLogs(resultLog);
-            setAlgorithm(algorithm);
+            setAlgorithm(algorithm, files[0].name);
             navigate('/visualizer');
             resolve();
           } catch (err: any) {
