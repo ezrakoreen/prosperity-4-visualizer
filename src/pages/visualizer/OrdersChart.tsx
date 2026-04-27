@@ -1,4 +1,4 @@
-import { Group, SegmentedControl, TextInput } from '@mantine/core';
+import { Group, SegmentedControl, Select, TextInput } from '@mantine/core';
 import Highcharts from 'highcharts';
 import { memo, ReactNode, useState } from 'react';
 import { ProsperitySymbol } from '../../models.ts';
@@ -11,11 +11,20 @@ export interface OrdersChartProps {
   symbol: ProsperitySymbol;
 }
 
+interface OrderBookLevelPoint {
+  timestamp: number;
+  price: number;
+  quantity: number;
+}
+
+const ALL_TRADERS_VALUE = '__ALL_TRADERS__';
+
 export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
   const [priceMode, setPriceMode] = useState<'mid' | 'bidask'>('mid');
   const [referenceMode, setReferenceMode] = useState<'original' | 'vamp' | 'midprice'>('original');
   const [quantityFilterInput, setQuantityFilterInput] = useState('');
+  const [traderFilter, setTraderFilter] = useState(ALL_TRADERS_VALUE);
 
   const trimmedQuantityFilterInput = quantityFilterInput.trim();
   const parsedQuantityFilter = Number(trimmedQuantityFilterInput);
@@ -25,6 +34,10 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
 
   function matchesQuantity(quantity: number): boolean {
     return quantityFilter === null || Math.abs(quantity) === quantityFilter;
+  }
+
+  function matchesTrader(buyer: string, seller: string): boolean {
+    return traderFilter === ALL_TRADERS_VALUE || buyer === traderFilter || seller === traderFilter;
   }
 
   function formatPrice(value: number): string {
@@ -53,12 +66,12 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
   }
 
   const midPriceData: [number, number][] = [];
-  const bid1Data: [number, number][] = [];
-  const bid2Data: [number, number][] = [];
-  const bid3Data: [number, number][] = [];
-  const ask1Data: [number, number][] = [];
-  const ask2Data: [number, number][] = [];
-  const ask3Data: [number, number][] = [];
+  const bid1Data: OrderBookLevelPoint[] = [];
+  const bid2Data: OrderBookLevelPoint[] = [];
+  const bid3Data: OrderBookLevelPoint[] = [];
+  const ask1Data: OrderBookLevelPoint[] = [];
+  const ask2Data: OrderBookLevelPoint[] = [];
+  const ask3Data: OrderBookLevelPoint[] = [];
   const midPriceByTimestamp = new Map<number, number>();
   const vampByTimestamp = new Map<number, number>();
   let previousVamp: number | undefined;
@@ -74,12 +87,12 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
     }
     midPriceData.push([row.timestamp, row.midPrice]);
 
-    if (row.bidPrices.length >= 1) bid1Data.push([row.timestamp, row.bidPrices[0]]);
-    if (row.bidPrices.length >= 2) bid2Data.push([row.timestamp, row.bidPrices[1]]);
-    if (row.bidPrices.length >= 3) bid3Data.push([row.timestamp, row.bidPrices[2]]);
-    if (row.askPrices.length >= 1) ask1Data.push([row.timestamp, row.askPrices[0]]);
-    if (row.askPrices.length >= 2) ask2Data.push([row.timestamp, row.askPrices[1]]);
-    if (row.askPrices.length >= 3) ask3Data.push([row.timestamp, row.askPrices[2]]);
+    if (row.bidPrices.length >= 1) bid1Data.push({ timestamp: row.timestamp, price: row.bidPrices[0], quantity: row.bidVolumes[0] ?? 0 });
+    if (row.bidPrices.length >= 2) bid2Data.push({ timestamp: row.timestamp, price: row.bidPrices[1], quantity: row.bidVolumes[1] ?? 0 });
+    if (row.bidPrices.length >= 3) bid3Data.push({ timestamp: row.timestamp, price: row.bidPrices[2], quantity: row.bidVolumes[2] ?? 0 });
+    if (row.askPrices.length >= 1) ask1Data.push({ timestamp: row.timestamp, price: row.askPrices[0], quantity: row.askVolumes[0] ?? 0 });
+    if (row.askPrices.length >= 2) ask2Data.push({ timestamp: row.timestamp, price: row.askPrices[1], quantity: row.askVolumes[1] ?? 0 });
+    if (row.askPrices.length >= 3) ask3Data.push({ timestamp: row.timestamp, price: row.askPrices[2], quantity: row.askVolumes[2] ?? 0 });
   }
 
   function getDisplayPrice(timestamp: number, price: number): number {
@@ -113,24 +126,35 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
     return formatPrice(rawPrice);
   }
 
+  function getDisplayedLevelData(levelData: OrderBookLevelPoint[]): [number, number | null][] {
+    return levelData.map(({ timestamp, price, quantity }) => [
+      timestamp,
+      matchesQuantity(quantity) ? getDisplayPrice(timestamp, price) : null,
+    ]);
+  }
+
   const displayedMidPriceData = midPriceData.map(([timestamp, price]) => [
     timestamp,
     getDisplayPrice(timestamp, price),
   ]);
-  const displayedBid1Data = bid1Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
-  const displayedBid2Data = bid2Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
-  const displayedBid3Data = bid3Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
-  const displayedAsk1Data = ask1Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
-  const displayedAsk2Data = ask2Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
-  const displayedAsk3Data = ask3Data.map(([timestamp, price]) => [timestamp, getDisplayPrice(timestamp, price)]);
+  const displayedBid1Data = getDisplayedLevelData(bid1Data);
+  const displayedBid2Data = getDisplayedLevelData(bid2Data);
+  const displayedBid3Data = getDisplayedLevelData(bid3Data);
+  const displayedAsk1Data = getDisplayedLevelData(ask1Data);
+  const displayedAsk2Data = getDisplayedLevelData(ask2Data);
+  const displayedAsk3Data = getDisplayedLevelData(ask3Data);
 
   const filledBuyData: Highcharts.PointOptionsObject[] = [];
   const filledSellData: Highcharts.PointOptionsObject[] = [];
   const otherTradeData: Highcharts.PointOptionsObject[] = [];
+  const traderNames = new Set<string>();
 
   for (const trade of algorithm.tradeHistory) {
     if (trade.symbol !== symbol) continue;
+    traderNames.add(trade.buyer);
+    traderNames.add(trade.seller);
     if (!matchesQuantity(trade.quantity)) continue;
+    if (!matchesTrader(trade.buyer, trade.seller)) continue;
 
     const vamp = vampByTimestamp.get(trade.timestamp);
     const midPrice = midPriceByTimestamp.get(trade.timestamp);
@@ -158,29 +182,40 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
 
   const unfilledBuyData: Highcharts.PointOptionsObject[] = [];
   const unfilledSellData: Highcharts.PointOptionsObject[] = [];
+  const showUnfilledOrders =
+    traderFilter === ALL_TRADERS_VALUE || traderFilter.includes('SUBMISSION');
 
-  for (const row of algorithm.data) {
-    const orders = row.orders[symbol];
-    if (!orders) continue;
+  if (showUnfilledOrders) {
+    for (const row of algorithm.data) {
+      const orders = row.orders[symbol];
+      if (!orders) continue;
 
-    for (const order of orders) {
-      if (!matchesQuantity(order.quantity)) continue;
+      for (const order of orders) {
+        if (!matchesQuantity(order.quantity)) continue;
 
-      const vamp = vampByTimestamp.get(row.state.timestamp);
-      const midPrice = midPriceByTimestamp.get(row.state.timestamp);
-      const point: Highcharts.PointOptionsObject = {
-        x: row.state.timestamp,
-        y: getDisplayPrice(row.state.timestamp, order.price),
-        custom: { quantity: Math.abs(order.quantity), rawPrice: order.price, vamp, midPrice },
-      };
+        const vamp = vampByTimestamp.get(row.state.timestamp);
+        const midPrice = midPriceByTimestamp.get(row.state.timestamp);
+        const point: Highcharts.PointOptionsObject = {
+          x: row.state.timestamp,
+          y: getDisplayPrice(row.state.timestamp, order.price),
+          custom: { quantity: Math.abs(order.quantity), rawPrice: order.price, vamp, midPrice },
+        };
 
-      if (order.quantity > 0) {
-        unfilledBuyData.push(point);
-      } else if (order.quantity < 0) {
-        unfilledSellData.push(point);
+        if (order.quantity > 0) {
+          unfilledBuyData.push(point);
+        } else if (order.quantity < 0) {
+          unfilledSellData.push(point);
+        }
       }
     }
   }
+
+  const traderOptions = [
+    { label: 'All traders', value: ALL_TRADERS_VALUE },
+    ...[...traderNames]
+      .sort((a, b) => a.localeCompare(b))
+      .map(traderName => ({ label: traderName, value: traderName })),
+  ];
 
   const filledBuyTooltip: Highcharts.SeriesTooltipOptionsObject = {
     pointFormatter(this: Highcharts.Point) {
@@ -231,6 +266,15 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
           },
         ]
       : [
+          {
+            type: 'line',
+            name: 'Mid price',
+            color: 'gray',
+            dashStyle: 'Dash',
+            data: displayedMidPriceData,
+            marker: { enabled: false },
+            enableMouseTracking: false,
+          },
           {
             type: 'line',
             name: 'Bid 3',
@@ -362,6 +406,15 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
         error={quantityFilterError ? 'Enter a valid number' : undefined}
         size="xs"
         w={110}
+      />
+      <Select
+        label="Trader"
+        value={traderFilter}
+        onChange={value => setTraderFilter(value ?? ALL_TRADERS_VALUE)}
+        data={traderOptions}
+        size="xs"
+        w={180}
+        searchable
       />
     </Group>
   );

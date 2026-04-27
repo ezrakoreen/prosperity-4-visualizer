@@ -20,6 +20,7 @@ import { VisualizerCard } from './VisualizerCard.tsx';
 export function VisualizerPage(): ReactNode {
   const algorithm = useStore(state => state.algorithm);
   const [singleColumnLayout, setSingleColumnLayout] = useState(false);
+  const [showPriceMovementCharts, setShowPriceMovementCharts] = useState(false);
   const [showProfitLoss, setShowProfitLoss] = useState(true);
   const [showPositions, setShowPositions] = useState(true);
   const [visibleSymbols, setVisibleSymbols] = useState<Record<string, boolean>>({});
@@ -94,6 +95,10 @@ export function VisualizerPage(): ReactNode {
     () => (algorithm === null ? null : getPerformanceMetrics(algorithm.activityLogs)),
     [algorithm],
   );
+  const vevSymbols = useMemo(() => productSymbols.filter(symbol => symbol.startsWith('VEV_')), [productSymbols]);
+  const visibleVevCount = vevSymbols.filter(symbol => visibleSymbols[symbol] !== false).length;
+  const allVevVisible = vevSymbols.length > 0 && visibleVevCount === vevSymbols.length;
+  const someVevVisible = visibleVevCount > 0 && !allVevVisible;
 
   if (algorithm === null || performanceMetrics === null) {
     return <Navigate to={`/${search}`} />;
@@ -107,11 +112,13 @@ export function VisualizerPage(): ReactNode {
       return;
     }
 
-    symbolColumns.push(
-      <Grid.Col key={`${symbol} - candlestick`} span={displaySpan}>
-        <CandlestickChart symbol={symbol} />
-      </Grid.Col>,
-    );
+    if (showPriceMovementCharts) {
+      symbolColumns.push(
+        <Grid.Col key={`${symbol} - candlestick`} span={displaySpan}>
+          <CandlestickChart symbol={symbol} />
+        </Grid.Col>,
+      );
+    }
 
     symbolColumns.push(
       <Grid.Col key={`${symbol} - orders`} span={displaySpan}>
@@ -172,6 +179,11 @@ export function VisualizerPage(): ReactNode {
                   onChange={event => setSingleColumnLayout(event.currentTarget.checked)}
                 />
                 <Checkbox
+                  label="Price movement charts"
+                  checked={showPriceMovementCharts}
+                  onChange={event => setShowPriceMovementCharts(event.currentTarget.checked)}
+                />
+                <Checkbox
                   label="Profit / Loss"
                   checked={showProfitLoss}
                   onChange={event => setShowProfitLoss(event.currentTarget.checked)}
@@ -183,6 +195,23 @@ export function VisualizerPage(): ReactNode {
                 />
               </Group>
               <Group gap="md">
+                {vevSymbols.length > 0 && (
+                  <Checkbox
+                    label="All VEV_* assets"
+                    checked={allVevVisible}
+                    indeterminate={someVevVisible}
+                    onChange={event => {
+                      const checked = event.currentTarget.checked;
+                      setVisibleSymbols(current => {
+                        const next = { ...current };
+                        for (const symbol of vevSymbols) {
+                          next[symbol] = checked;
+                        }
+                        return next;
+                      });
+                    }}
+                  />
+                )}
                 {productSymbols.map(symbol => (
                   <Checkbox
                     key={symbol}

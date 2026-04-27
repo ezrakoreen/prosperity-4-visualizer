@@ -1,12 +1,12 @@
-import { Box } from '@mantine/core';
+import { Box, Button, Group } from '@mantine/core';
 import Highcharts from 'highcharts/highstock';
 import HighchartsAccessibility from 'highcharts/modules/accessibility';
 import HighchartsExporting from 'highcharts/modules/exporting';
 import HighchartsOfflineExporting from 'highcharts/modules/offline-exporting';
 import HighchartsHighContrastDarkTheme from 'highcharts/themes/high-contrast-dark';
-import HighchartsReact from 'highcharts-react-official';
+import HighchartsReact, { HighchartsReactRefObject } from 'highcharts-react-official';
 import merge from 'lodash/merge';
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useActualColorScheme } from '../../hooks/use-actual-color-scheme.ts';
 import { formatNumber } from '../../utils/format.ts';
 import { VisualizerCard } from './VisualizerCard.tsx';
@@ -54,6 +54,33 @@ interface ChartProps {
 
 export function Chart({ title, options, series, min, max, controls }: ChartProps): ReactNode {
   const colorScheme = useActualColorScheme();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<HighchartsReactRefObject>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    function syncFullscreenState(): void {
+      const nextIsFullscreen = document.fullscreenElement === cardRef.current;
+      setIsFullscreen(nextIsFullscreen);
+      requestAnimationFrame(() => {
+        chartRef.current?.chart.reflow();
+      });
+    }
+
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    return () => {
+      document.removeEventListener('fullscreenchange', syncFullscreenState);
+    };
+  }, []);
+
+  async function toggleFullscreen(): Promise<void> {
+    if (document.fullscreenElement === cardRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await cardRef.current?.requestFullscreen();
+  }
 
   const fullOptions = useMemo((): Highcharts.Options => {
     const themeOptions = colorScheme === 'light' ? {} : getThemeOptions(HighchartsHighContrastDarkTheme);
@@ -61,7 +88,7 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
     const baseOptions: Highcharts.Options = {
       chart: {
         animation: false,
-        height: 400,
+        height: isFullscreen ? '57%' : 400,
         zoomType: 'x',
         pinchType: 'x',
         zooming: {
@@ -98,12 +125,6 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
               e.text = `Timestamp ${formatNumber(timestamp)}<br/>`;
               return false;
             });
-          },
-          fullscreenOpen(this: Highcharts.Chart) {
-            (this as any).tooltip.update({ outside: false });
-          },
-          fullscreenClose(this: Highcharts.Chart) {
-            (this as any).tooltip.update({ outside: true });
           },
         },
       } as Highcharts.ChartOptions & { zoomType: 'x'; pinchType: 'x' },
@@ -153,10 +174,17 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
       tooltip: {
         split: false,
         shared: true,
-        outside: true,
+        outside: !isFullscreen,
       },
       legend: {
         enabled: true,
+      },
+      exporting: {
+        buttons: {
+          contextButton: {
+            menuItems: ['printChart', 'separator', 'downloadPNG', 'downloadJPEG', 'downloadSVG'],
+          },
+        },
       },
       rangeSelector: {
         enabled: false,
@@ -171,16 +199,48 @@ export function Chart({ title, options, series, min, max, controls }: ChartProps
     };
 
     return merge({}, themeOptions, baseOptions, options);
-  }, [colorScheme, title, options, series, min, max]);
+  }, [colorScheme, title, options, series, min, max, isFullscreen]);
 
   return (
-    <VisualizerCard p={0}>
-      {controls && (
-        <Box p="md" pb={0}>
-          {controls}
+    <Box
+      ref={cardRef}
+      style={
+        isFullscreen
+          ? {
+              height: '100%',
+              padding: '16px',
+              boxSizing: 'border-box',
+            }
+          : undefined
+      }
+    >
+      <VisualizerCard
+        p={0}
+        style={
+          isFullscreen
+            ? {
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+              }
+            : undefined
+        }
+      >
+        <Group justify="space-between" align="flex-end" p="md" pb={0} wrap="nowrap">
+          <Box style={{ flex: 1, minWidth: 0 }}>{controls}</Box>
+          <Button size="xs" variant="default" onClick={() => void toggleFullscreen()}>
+            {isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
+          </Button>
+        </Group>
+        <Box style={isFullscreen ? { flex: 1, minHeight: 0 } : undefined}>
+          <HighchartsReact
+            ref={chartRef}
+            highcharts={Highcharts}
+            constructorType={'stockChart'}
+            options={fullOptions}
+          />
         </Box>
-      )}
-      <HighchartsReact highcharts={Highcharts} constructorType={'stockChart'} options={fullOptions} />
-    </VisualizerCard>
+      </VisualizerCard>
+    </Box>
   );
 }
