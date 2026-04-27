@@ -1,4 +1,4 @@
-import { ActivityLogRow } from '../models.ts';
+import { ActivityLogRow, ResultLogTradeHistoryItem } from '../models.ts';
 
 export type ProfitLossPoint = [timestamp: number, profitLoss: number];
 
@@ -16,6 +16,75 @@ export function getProfitLossSeries(activityLogs: ActivityLogRow[]): ProfitLossP
   }
 
   return [...profitLossByTimestamp.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+export function getTraderProfitLossSeries(
+  activityLogs: ActivityLogRow[],
+  tradeHistory: ResultLogTradeHistoryItem[],
+  trader: string,
+  symbolFilter?: string,
+): ProfitLossPoint[] {
+  const tradesByTimestamp = new Map<number, ResultLogTradeHistoryItem[]>();
+  const rowsByTimestamp = new Map<number, ActivityLogRow[]>();
+  const timestamps = new Set<number>();
+
+  for (const row of activityLogs) {
+    if (symbolFilter !== undefined && row.product !== symbolFilter) continue;
+
+    const rows = rowsByTimestamp.get(row.timestamp);
+    if (rows === undefined) {
+      rowsByTimestamp.set(row.timestamp, [row]);
+    } else {
+      rows.push(row);
+    }
+    timestamps.add(row.timestamp);
+  }
+
+  for (const trade of tradeHistory) {
+    if (symbolFilter !== undefined && trade.symbol !== symbolFilter) continue;
+    if (trade.buyer !== trader && trade.seller !== trader) continue;
+
+    const trades = tradesByTimestamp.get(trade.timestamp);
+    if (trades === undefined) {
+      tradesByTimestamp.set(trade.timestamp, [trade]);
+    } else {
+      trades.push(trade);
+    }
+    timestamps.add(trade.timestamp);
+  }
+
+  const sortedTimestamps = [...timestamps].sort((a, b) => a - b);
+  const lastMidPriceBySymbol = new Map<string, number>();
+  const positionBySymbol = new Map<string, number>();
+  let cash = 0;
+
+  return sortedTimestamps.map(timestamp => {
+    for (const row of rowsByTimestamp.get(timestamp) ?? []) {
+      lastMidPriceBySymbol.set(row.product, row.midPrice);
+    }
+
+    for (const trade of tradesByTimestamp.get(timestamp) ?? []) {
+      if (trade.buyer === trader) {
+        positionBySymbol.set(trade.symbol, (positionBySymbol.get(trade.symbol) ?? 0) + trade.quantity);
+        cash -= trade.price * trade.quantity;
+      }
+
+      if (trade.seller === trader) {
+        positionBySymbol.set(trade.symbol, (positionBySymbol.get(trade.symbol) ?? 0) - trade.quantity);
+        cash += trade.price * trade.quantity;
+      }
+    }
+
+    let profitLoss = cash;
+    for (const [symbol, position] of positionBySymbol.entries()) {
+      const midPrice = lastMidPriceBySymbol.get(symbol);
+      if (midPrice !== undefined) {
+        profitLoss += position * midPrice;
+      }
+    }
+
+    return [timestamp, profitLoss];
+  });
 }
 
 export function getPerformanceMetrics(activityLogs: ActivityLogRow[]): PerformanceMetrics {
