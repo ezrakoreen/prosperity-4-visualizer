@@ -256,6 +256,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
     priceMode === 'mid'
       ? [
           {
+            id: `${symbol}-mid-price`,
             type: 'line',
             name: 'Mid price',
             color: 'gray',
@@ -267,6 +268,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
         ]
       : [
           {
+            id: `${symbol}-mid-price`,
             type: 'line',
             name: 'Mid price',
             color: 'gray',
@@ -276,6 +278,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
             enableMouseTracking: false,
           },
           {
+            id: `${symbol}-bid-3`,
             type: 'line',
             name: 'Bid 3',
             color: getBidColor(0.5),
@@ -284,6 +287,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
             enableMouseTracking: false,
           },
           {
+            id: `${symbol}-bid-2`,
             type: 'line',
             name: 'Bid 2',
             color: getBidColor(0.75),
@@ -292,6 +296,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
             enableMouseTracking: false,
           },
           {
+            id: `${symbol}-bid-1`,
             type: 'line',
             name: 'Bid 1',
             color: getBidColor(1.0),
@@ -300,6 +305,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
             enableMouseTracking: false,
           },
           {
+            id: `${symbol}-ask-1`,
             type: 'line',
             name: 'Ask 1',
             color: getAskColor(1.0),
@@ -308,6 +314,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
             enableMouseTracking: false,
           },
           {
+            id: `${symbol}-ask-2`,
             type: 'line',
             name: 'Ask 2',
             color: getAskColor(0.75),
@@ -316,6 +323,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
             enableMouseTracking: false,
           },
           {
+            id: `${symbol}-ask-3`,
             type: 'line',
             name: 'Ask 3',
             color: getAskColor(0.5),
@@ -328,6 +336,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
   const series: Highcharts.SeriesOptionsType[] = [
     ...priceSeries,
     {
+      id: `${symbol}-filled-buy`,
       type: 'scatter',
       name: 'Buy (filled)',
       color: getBidColor(1.0),
@@ -337,6 +346,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       dataGrouping: { enabled: false },
     },
     {
+      id: `${symbol}-unfilled-buy`,
       type: 'scatter',
       name: 'Buy (order)',
       color: getBidColor(0.3),
@@ -347,6 +357,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       visible: false,
     },
     {
+      id: `${symbol}-filled-sell`,
       type: 'scatter',
       name: 'Sell (filled)',
       color: getAskColor(1.0),
@@ -356,6 +367,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       dataGrouping: { enabled: false },
     },
     {
+      id: `${symbol}-unfilled-sell`,
       type: 'scatter',
       name: 'Sell (order)',
       color: getAskColor(0.3),
@@ -366,6 +378,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       visible: false,
     },
     {
+      id: `${symbol}-other-trades`,
       type: 'scatter',
       name: 'Other trades',
       color: '#a855f7',
@@ -412,6 +425,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
         value={traderFilter}
         onChange={value => setTraderFilter(value ?? ALL_TRADERS_VALUE)}
         data={traderOptions}
+        comboboxProps={{ withinPortal: false }}
         size="xs"
         w={180}
         searchable
