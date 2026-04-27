@@ -27,6 +27,7 @@ const PASSIVE_BUY_COLOR = getBidColor(1.0);
 const AGGRESSIVE_BUY_COLOR = '#2563eb';
 const PASSIVE_SELL_COLOR = getAskColor(1.0);
 const AGGRESSIVE_SELL_COLOR = '#f97316';
+const ALL_COUNTERPARTIES_VALUE = '__ALL_COUNTERPARTIES__';
 
 export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
@@ -34,6 +35,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
   const [referenceMode, setReferenceMode] = useState<'original' | 'vamp' | 'midprice'>('original');
   const [quantityFilterInput, setQuantityFilterInput] = useState('');
   const [traderFilter, setTraderFilter] = useState(ALL_TRADERS_VALUE);
+  const [counterpartyFilter, setCounterpartyFilter] = useState(ALL_COUNTERPARTIES_VALUE);
   const [showSelectedTraderTradesAsBuysAndSells, setShowSelectedTraderTradesAsBuysAndSells] = useState(false);
 
   const trimmedQuantityFilterInput = quantityFilterInput.trim();
@@ -48,6 +50,22 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
 
   function matchesTrader(buyer: string, seller: string): boolean {
     return traderFilter === ALL_TRADERS_VALUE || buyer === traderFilter || seller === traderFilter;
+  }
+
+  function matchesCounterparty(buyer: string, seller: string): boolean {
+    if (traderFilter === ALL_TRADERS_VALUE || counterpartyFilter === ALL_COUNTERPARTIES_VALUE) {
+      return true;
+    }
+
+    if (buyer === traderFilter) {
+      return seller === counterpartyFilter;
+    }
+
+    if (seller === traderFilter) {
+      return buyer === counterpartyFilter;
+    }
+
+    return false;
   }
 
   function isSubmissionTrader(trader: string): boolean {
@@ -193,6 +211,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
   const aggressiveSellData: Highcharts.PointOptionsObject[] = [];
   const otherTradeData: Highcharts.PointOptionsObject[] = [];
   const traderNames = new Set<string>();
+  const counterpartyNames = new Set<string>();
   const showSelectedTraderDirectionalTrades =
     showSelectedTraderTradesAsBuysAndSells && traderFilter !== ALL_TRADERS_VALUE && !isSubmissionTrader(traderFilter);
 
@@ -200,8 +219,16 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
     if (trade.symbol !== symbol) continue;
     traderNames.add(trade.buyer);
     traderNames.add(trade.seller);
+    if (traderFilter !== ALL_TRADERS_VALUE) {
+      if (trade.buyer === traderFilter) {
+        counterpartyNames.add(trade.seller);
+      } else if (trade.seller === traderFilter) {
+        counterpartyNames.add(trade.buyer);
+      }
+    }
     if (!matchesQuantity(trade.quantity)) continue;
     if (!matchesTrader(trade.buyer, trade.seller)) continue;
+    if (!matchesCounterparty(trade.buyer, trade.seller)) continue;
 
     const vamp = vampByTimestamp.get(trade.timestamp);
     const midPrice = midPriceByTimestamp.get(trade.timestamp);
@@ -271,6 +298,16 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       .sort((a, b) => a.localeCompare(b))
       .map(traderName => ({ label: traderName, value: traderName })),
   ];
+  const counterpartyOptions = [
+    { label: 'All counterparties', value: ALL_COUNTERPARTIES_VALUE },
+    ...[...counterpartyNames]
+      .sort((a, b) => a.localeCompare(b))
+      .map(counterpartyName => ({ label: counterpartyName, value: counterpartyName })),
+  ];
+  const selectedCounterpartyFilter =
+    traderFilter !== ALL_TRADERS_VALUE && counterpartyNames.has(counterpartyFilter)
+      ? counterpartyFilter
+      : ALL_COUNTERPARTIES_VALUE;
 
   const passiveBuyTooltip: Highcharts.SeriesTooltipOptionsObject = {
     pointFormatter(this: Highcharts.Point) {
@@ -512,13 +549,28 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       <Select
         label="Trader"
         value={traderFilter}
-        onChange={value => setTraderFilter(value ?? ALL_TRADERS_VALUE)}
+        onChange={value => {
+          setTraderFilter(value ?? ALL_TRADERS_VALUE);
+          setCounterpartyFilter(ALL_COUNTERPARTIES_VALUE);
+        }}
         data={traderOptions}
         comboboxProps={{ withinPortal: false }}
         size="xs"
         w={180}
         searchable
       />
+      {traderFilter !== ALL_TRADERS_VALUE && (
+        <Select
+          label="Counterparty"
+          value={selectedCounterpartyFilter}
+          onChange={value => setCounterpartyFilter(value ?? ALL_COUNTERPARTIES_VALUE)}
+          data={counterpartyOptions}
+          comboboxProps={{ withinPortal: false }}
+          size="xs"
+          w={180}
+          searchable
+        />
+      )}
       <Checkbox
         label="Show bot buys/sells"
         checked={showSelectedTraderDirectionalTrades}
