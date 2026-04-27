@@ -1,4 +1,4 @@
-import { Group, SegmentedControl, Select, TextInput } from '@mantine/core';
+import { Checkbox, Group, SegmentedControl, Select, TextInput } from '@mantine/core';
 import Highcharts from 'highcharts';
 import { memo, ReactNode, useState } from 'react';
 import { ProsperitySymbol } from '../../models.ts';
@@ -17,7 +17,16 @@ interface OrderBookLevelPoint {
   quantity: number;
 }
 
+interface TopOfBook {
+  bestBid?: number;
+  bestAsk?: number;
+}
+
 const ALL_TRADERS_VALUE = '__ALL_TRADERS__';
+const PASSIVE_BUY_COLOR = getBidColor(1.0);
+const AGGRESSIVE_BUY_COLOR = '#2563eb';
+const PASSIVE_SELL_COLOR = getAskColor(1.0);
+const AGGRESSIVE_SELL_COLOR = '#f97316';
 
 export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProps): ReactNode {
   const algorithm = useStore(state => state.algorithm)!;
@@ -25,6 +34,7 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
   const [referenceMode, setReferenceMode] = useState<'original' | 'vamp' | 'midprice'>('original');
   const [quantityFilterInput, setQuantityFilterInput] = useState('');
   const [traderFilter, setTraderFilter] = useState(ALL_TRADERS_VALUE);
+  const [showSelectedTraderTradesAsBuysAndSells, setShowSelectedTraderTradesAsBuysAndSells] = useState(false);
 
   const trimmedQuantityFilterInput = quantityFilterInput.trim();
   const parsedQuantityFilter = Number(trimmedQuantityFilterInput);
@@ -38,6 +48,10 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
 
   function matchesTrader(buyer: string, seller: string): boolean {
     return traderFilter === ALL_TRADERS_VALUE || buyer === traderFilter || seller === traderFilter;
+  }
+
+  function isSubmissionTrader(trader: string): boolean {
+    return trader.includes('SUBMISSION');
   }
 
   function formatPrice(value: number): string {
@@ -74,12 +88,17 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
   const ask3Data: OrderBookLevelPoint[] = [];
   const midPriceByTimestamp = new Map<number, number>();
   const vampByTimestamp = new Map<number, number>();
+  const topOfBookByTimestamp = new Map<number, TopOfBook>();
   let previousVamp: number | undefined;
 
   for (const row of algorithm.activityLogs) {
     if (row.product !== symbol) continue;
 
     midPriceByTimestamp.set(row.timestamp, row.midPrice);
+    topOfBookByTimestamp.set(row.timestamp, {
+      bestBid: row.bidPrices[0],
+      bestAsk: row.askPrices[0],
+    });
     const vamp = getVamp(row, previousVamp);
     if (vamp !== undefined) {
       vampByTimestamp.set(row.timestamp, vamp);
@@ -126,6 +145,30 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
     return formatPrice(rawPrice);
   }
 
+  function inferAggressiveness(side: 'buy' | 'sell', timestamp: number, price: number): 'passive' | 'aggressive' {
+    const topOfBook = topOfBookByTimestamp.get(timestamp);
+
+    if (side === 'buy') {
+      if (topOfBook?.bestAsk !== undefined) {
+        return price >= topOfBook.bestAsk ? 'aggressive' : 'passive';
+      }
+
+      if (topOfBook?.bestBid !== undefined) {
+        return price > topOfBook.bestBid ? 'aggressive' : 'passive';
+      }
+    } else {
+      if (topOfBook?.bestBid !== undefined) {
+        return price <= topOfBook.bestBid ? 'aggressive' : 'passive';
+      }
+
+      if (topOfBook?.bestAsk !== undefined) {
+        return price < topOfBook.bestAsk ? 'aggressive' : 'passive';
+      }
+    }
+
+    return 'passive';
+  }
+
   function getDisplayedLevelData(levelData: OrderBookLevelPoint[]): [number, number | null][] {
     return levelData.map(({ timestamp, price, quantity }) => [
       timestamp,
@@ -144,10 +187,14 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
   const displayedAsk2Data = getDisplayedLevelData(ask2Data);
   const displayedAsk3Data = getDisplayedLevelData(ask3Data);
 
-  const filledBuyData: Highcharts.PointOptionsObject[] = [];
-  const filledSellData: Highcharts.PointOptionsObject[] = [];
+  const passiveBuyData: Highcharts.PointOptionsObject[] = [];
+  const aggressiveBuyData: Highcharts.PointOptionsObject[] = [];
+  const passiveSellData: Highcharts.PointOptionsObject[] = [];
+  const aggressiveSellData: Highcharts.PointOptionsObject[] = [];
   const otherTradeData: Highcharts.PointOptionsObject[] = [];
   const traderNames = new Set<string>();
+  const showSelectedTraderDirectionalTrades =
+    showSelectedTraderTradesAsBuysAndSells && traderFilter !== ALL_TRADERS_VALUE && !isSubmissionTrader(traderFilter);
 
   for (const trade of algorithm.tradeHistory) {
     if (trade.symbol !== symbol) continue;
@@ -171,10 +218,18 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       },
     };
 
-    if (trade.buyer.includes('SUBMISSION')) {
-      filledBuyData.push(point);
-    } else if (trade.seller.includes('SUBMISSION')) {
-      filledSellData.push(point);
+    if (isSubmissionTrader(trade.buyer) || (showSelectedTraderDirectionalTrades && trade.buyer === traderFilter)) {
+      if (inferAggressiveness('buy', trade.timestamp, trade.price) === 'aggressive') {
+        aggressiveBuyData.push(point);
+      } else {
+        passiveBuyData.push(point);
+      }
+    } else if (isSubmissionTrader(trade.seller) || (showSelectedTraderDirectionalTrades && trade.seller === traderFilter)) {
+      if (inferAggressiveness('sell', trade.timestamp, trade.price) === 'aggressive') {
+        aggressiveSellData.push(point);
+      } else {
+        passiveSellData.push(point);
+      }
     } else {
       otherTradeData.push(point);
     }
@@ -217,17 +272,31 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       .map(traderName => ({ label: traderName, value: traderName })),
   ];
 
-  const filledBuyTooltip: Highcharts.SeriesTooltipOptionsObject = {
+  const passiveBuyTooltip: Highcharts.SeriesTooltipOptionsObject = {
     pointFormatter(this: Highcharts.Point) {
       const { quantity, buyer, seller } = (this as any).custom ?? {};
-      return `<span style="color:${this.color}">▲</span> Buy (filled): <b>${formatTooltipPrice(this)}</b> (qty: ${quantity}, buyer: ${buyer}, seller: ${seller})<br/>`;
+      return `<span style="color:${this.color}">▲</span> Buy (placed first): <b>${formatTooltipPrice(this)}</b> (qty: ${quantity}, buyer: ${buyer}, seller: ${seller})<br/>`;
     },
   };
 
-  const filledSellTooltip: Highcharts.SeriesTooltipOptionsObject = {
+  const aggressiveBuyTooltip: Highcharts.SeriesTooltipOptionsObject = {
     pointFormatter(this: Highcharts.Point) {
       const { quantity, buyer, seller } = (this as any).custom ?? {};
-      return `<span style="color:${this.color}">▼</span> Sell (filled): <b>${formatTooltipPrice(this)}</b> (qty: ${quantity}, buyer: ${buyer}, seller: ${seller})<br/>`;
+      return `<span style="color:${this.color}">▲</span> Buy (filled existing): <b>${formatTooltipPrice(this)}</b> (qty: ${quantity}, buyer: ${buyer}, seller: ${seller})<br/>`;
+    },
+  };
+
+  const passiveSellTooltip: Highcharts.SeriesTooltipOptionsObject = {
+    pointFormatter(this: Highcharts.Point) {
+      const { quantity, buyer, seller } = (this as any).custom ?? {};
+      return `<span style="color:${this.color}">▼</span> Sell (placed first): <b>${formatTooltipPrice(this)}</b> (qty: ${quantity}, buyer: ${buyer}, seller: ${seller})<br/>`;
+    },
+  };
+
+  const aggressiveSellTooltip: Highcharts.SeriesTooltipOptionsObject = {
+    pointFormatter(this: Highcharts.Point) {
+      const { quantity, buyer, seller } = (this as any).custom ?? {};
+      return `<span style="color:${this.color}">▼</span> Sell (filled existing): <b>${formatTooltipPrice(this)}</b> (qty: ${quantity}, buyer: ${buyer}, seller: ${seller})<br/>`;
     },
   };
 
@@ -336,13 +405,23 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
   const series: Highcharts.SeriesOptionsType[] = [
     ...priceSeries,
     {
-      id: `${symbol}-filled-buy`,
+      id: `${symbol}-passive-buy`,
       type: 'scatter',
-      name: 'Buy (filled)',
-      color: getBidColor(1.0),
-      data: filledBuyData,
+      name: 'Buy (placed first)',
+      color: PASSIVE_BUY_COLOR,
+      data: passiveBuyData,
       marker: { symbol: 'triangle', radius: 6 },
-      tooltip: filledBuyTooltip,
+      tooltip: passiveBuyTooltip,
+      dataGrouping: { enabled: false },
+    },
+    {
+      id: `${symbol}-aggressive-buy`,
+      type: 'scatter',
+      name: 'Buy (filled existing)',
+      color: AGGRESSIVE_BUY_COLOR,
+      data: aggressiveBuyData,
+      marker: { symbol: 'triangle', radius: 6 },
+      tooltip: aggressiveBuyTooltip,
       dataGrouping: { enabled: false },
     },
     {
@@ -357,13 +436,23 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
       visible: false,
     },
     {
-      id: `${symbol}-filled-sell`,
+      id: `${symbol}-passive-sell`,
       type: 'scatter',
-      name: 'Sell (filled)',
-      color: getAskColor(1.0),
-      data: filledSellData,
+      name: 'Sell (placed first)',
+      color: PASSIVE_SELL_COLOR,
+      data: passiveSellData,
       marker: { symbol: 'triangle-down', radius: 6 },
-      tooltip: filledSellTooltip,
+      tooltip: passiveSellTooltip,
+      dataGrouping: { enabled: false },
+    },
+    {
+      id: `${symbol}-aggressive-sell`,
+      type: 'scatter',
+      name: 'Sell (filled existing)',
+      color: AGGRESSIVE_SELL_COLOR,
+      data: aggressiveSellData,
+      marker: { symbol: 'triangle-down', radius: 6 },
+      tooltip: aggressiveSellTooltip,
       dataGrouping: { enabled: false },
     },
     {
@@ -429,6 +518,12 @@ export const OrdersChart = memo(function OrdersChart({ symbol }: OrdersChartProp
         size="xs"
         w={180}
         searchable
+      />
+      <Checkbox
+        label="Show bot buys/sells"
+        checked={showSelectedTraderDirectionalTrades}
+        onChange={event => setShowSelectedTraderTradesAsBuysAndSells(event.currentTarget.checked)}
+        disabled={traderFilter === ALL_TRADERS_VALUE || isSubmissionTrader(traderFilter)}
       />
     </Group>
   );
