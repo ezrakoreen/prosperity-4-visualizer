@@ -1,4 +1,4 @@
-import { Center, Checkbox, Container, Grid, Group, Stack, Text, Title } from '@mantine/core';
+import { Center, Checkbox, Container, Grid, Group, ScrollArea, Stack, Text, Title } from '@mantine/core';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store.ts';
@@ -16,6 +16,20 @@ import { ProfitLossChart } from './ProfitLossChart.tsx';
 import { TimestampsCard } from './TimestampsCard.tsx';
 import { TransportChart } from './TransportChart.tsx';
 import { VisualizerCard } from './VisualizerCard.tsx';
+
+const symbolVisibilityPrefixes = [
+  'GALAXY',
+  'MICROCHIP',
+  'OXYGEN',
+  'PANEL',
+  'PEBBLES',
+  'ROBOT',
+  'SLEEP',
+  'SNACKPACK',
+  'TRANSLATOR',
+  'UV_VISOR',
+  'VEV_',
+] as const;
 
 export function VisualizerPage(): ReactNode {
   const algorithm = useStore(state => state.algorithm);
@@ -95,10 +109,20 @@ export function VisualizerPage(): ReactNode {
     () => (algorithm === null ? null : getPerformanceMetrics(algorithm.activityLogs)),
     [algorithm],
   );
-  const vevSymbols = useMemo(() => productSymbols.filter(symbol => symbol.startsWith('VEV_')), [productSymbols]);
-  const visibleVevCount = vevSymbols.filter(symbol => visibleSymbols[symbol] !== false).length;
-  const allVevVisible = vevSymbols.length > 0 && visibleVevCount === vevSymbols.length;
-  const someVevVisible = visibleVevCount > 0 && !allVevVisible;
+  const symbolVisibilityGroups = useMemo(
+    () =>
+      symbolVisibilityPrefixes
+        .map(prefix => {
+          const symbols = productSymbols.filter(symbol => symbol.startsWith(prefix));
+          const visibleCount = symbols.filter(symbol => visibleSymbols[symbol] !== false).length;
+          const allVisible = symbols.length > 0 && visibleCount === symbols.length;
+          const someVisible = visibleCount > 0 && !allVisible;
+
+          return { prefix, symbols, allVisible, someVisible };
+        })
+        .filter(group => group.symbols.length > 0),
+    [productSymbols, visibleSymbols],
+  );
 
   if (algorithm === null || performanceMetrics === null) {
     return <Navigate to={`/${search}`} />;
@@ -195,37 +219,43 @@ export function VisualizerPage(): ReactNode {
                 />
               </Group>
               <Group gap="md">
-                {vevSymbols.length > 0 && (
-                  <Checkbox
-                    label="All VEV_* assets"
-                    checked={allVevVisible}
-                    indeterminate={someVevVisible}
-                    onChange={event => {
-                      const checked = event.currentTarget.checked;
-                      setVisibleSymbols(current => {
-                        const next = { ...current };
-                        for (const symbol of vevSymbols) {
-                          next[symbol] = checked;
-                        }
-                        return next;
-                      });
-                    }}
-                  />
-                )}
-                {productSymbols.map(symbol => (
-                  <Checkbox
-                    key={symbol}
-                    label={symbol}
-                    checked={visibleSymbols[symbol] !== false}
-                    onChange={event => {
-                      const checked = event.currentTarget.checked;
-                      setVisibleSymbols(current => ({
-                        ...current,
-                        [symbol]: checked,
-                      }));
-                    }}
-                  />
-                ))}
+                <Stack gap="xs" w="100%">
+                  {symbolVisibilityGroups.map(group => (
+                    <ScrollArea key={group.prefix} type="auto" offsetScrollbars>
+                      <Group gap="md" wrap="nowrap">
+                        <Checkbox
+                          label={`All ${group.prefix}* products`}
+                          checked={group.allVisible}
+                          indeterminate={group.someVisible}
+                          onChange={event => {
+                            const checked = event.currentTarget.checked;
+                            setVisibleSymbols(current => {
+                              const next = { ...current };
+                              for (const symbol of group.symbols) {
+                                next[symbol] = checked;
+                              }
+                              return next;
+                            });
+                          }}
+                        />
+                        {group.symbols.map(symbol => (
+                          <Checkbox
+                            key={symbol}
+                            label={symbol}
+                            checked={visibleSymbols[symbol] !== false}
+                            onChange={event => {
+                              const checked = event.currentTarget.checked;
+                              setVisibleSymbols(current => ({
+                                ...current,
+                                [symbol]: checked,
+                              }));
+                            }}
+                          />
+                        ))}
+                      </Group>
+                    </ScrollArea>
+                  ))}
+                </Stack>
               </Group>
             </Stack>
           </VisualizerCard>
